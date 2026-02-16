@@ -1,0 +1,2734 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#03110D">
+<meta name="description" content="Saga de Hábitos – RPG Habit Tracker">
+<title>SAGA DE HÁBITOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════════════════
+   ROOT VARIABLES & RESET
+═══════════════════════════════════════════════════════ */
+:root {
+  --bg-0: #03110D;
+  --bg-1: #16302B;
+  --bg-2: #0C324A;
+  --bg-3: #390517;
+  --accent: #C11720;
+  --accent-glow: rgba(193,23,32,0.35);
+  --gold: #FEF1D5;
+  --gray: #E0E0E0;
+  --chart-blue: #679CBC;
+  --chart-brown: #A38560;
+  --rank-e: #9E9E9E;
+  --rank-d: #66BB6A;
+  --rank-c: #42A5F5;
+  --rank-b: #AB47BC;
+  --rank-a: #FFA726;
+  --rank-s: #FFD700;
+  --hp-green: #2ECC71;
+  --hp-yellow: #F39C12;
+  --hp-red: #C11720;
+  --border: rgba(254,241,213,0.12);
+  --border-bright: rgba(254,241,213,0.3);
+  --header-h: 62px;
+  --nav-h: 68px;
+  --radius: 4px;
+  --radius-lg: 8px;
+  --font: 'Roboto', sans-serif;
+  --mono: 'Roboto Mono', monospace;
+  --transition: 0.18s ease;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  background: var(--bg-0);
+  font-family: var(--font);
+  color: var(--gray);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+}
+img { display: block; max-width: 100%; }
+input, textarea, select {
+  font-family: var(--font);
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--border-bright);
+  color: var(--gold);
+  border-radius: var(--radius);
+  outline: none;
+  font-size: 14px;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+button { cursor: pointer; border: none; font-family: var(--font); }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+
+/* ═══════════════════════════════════════════════════════
+   SCAN LINE OVERLAY
+═══════════════════════════════════════════════════════ */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events: none; z-index: 9999;
+}
+
+/* ═══════════════════════════════════════════════════════
+   APP LAYOUT
+═══════════════════════════════════════════════════════ */
+#app {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  max-width: 480px; margin: 0 auto;
+  background: var(--bg-0);
+}
+#header {
+  height: var(--header-h);
+  min-height: var(--header-h);
+  background: linear-gradient(135deg, rgba(12,50,74,0.95) 0%, rgba(3,17,13,0.98) 100%);
+  border-bottom: 1px solid var(--border-bright);
+  display: flex; align-items: center;
+  padding: 0 16px; gap: 12px;
+  position: relative; z-index: 100;
+}
+#header::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+.header-logo {
+  font-size: 11px; font-weight: 900; letter-spacing: 3px;
+  color: var(--gold); text-transform: uppercase;
+  flex: 1;
+}
+.header-logo span { color: var(--accent); }
+.header-rank-badge {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 900; letter-spacing: 1px;
+  border: 2px solid currentColor;
+  border-radius: var(--radius);
+  position: relative;
+  transition: var(--transition);
+}
+.header-level {
+  font-size: 11px; font-weight: 700; color: var(--gold);
+  text-align: right; line-height: 1.3;
+}
+.header-level .lv { font-size: 9px; color: var(--gray); letter-spacing: 1px; }
+
+/* Screens */
+#screens {
+  flex: 1; overflow: hidden; position: relative;
+}
+.screen {
+  position: absolute; inset: 0;
+  overflow-y: auto; overflow-x: hidden;
+  padding-bottom: 8px;
+  display: none;
+}
+.screen.active { display: block; }
+
+/* Bottom Nav */
+#bottom-nav {
+  height: var(--nav-h);
+  min-height: var(--nav-h);
+  background: rgba(3,17,13,0.97);
+  border-top: 1px solid var(--border-bright);
+  display: flex;
+}
+.nav-btn {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px; background: transparent;
+  color: rgba(224,224,224,0.45);
+  padding: 8px 4px; transition: var(--transition);
+  position: relative;
+}
+.nav-btn.active { color: var(--gold); }
+.nav-btn.active::after {
+  content: '';
+  position: absolute; top: 0; left: 20%; right: 20%;
+  height: 2px; background: var(--accent);
+  border-radius: 0 0 2px 2px;
+}
+.nav-btn svg { width: 22px; height: 22px; }
+.nav-btn .nav-label { font-size: 9px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; }
+
+/* ═══════════════════════════════════════════════════════
+   UTILITY COMPONENTS
+═══════════════════════════════════════════════════════ */
+.panel {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.panel::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-bright), transparent);
+}
+.panel-blue { background: rgba(12,50,74,0.6); }
+.panel-red { background: rgba(57,5,23,0.7); }
+.panel-title {
+  font-size: 9px; font-weight: 700; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--chart-brown);
+  margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.panel-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* Corner decoration */
+.panel.corner::before, .panel.corner::after { display: none; }
+.panel.corner { padding: 16px; }
+.panel.corner > *:first-child { position: relative; }
+
+/* HP / XP Bars */
+.stat-bar { width: 100%; height: 6px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; }
+.stat-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+.bar-hp .stat-bar-fill { background: linear-gradient(90deg, var(--hp-red), #FF6B6B); }
+.bar-xp .stat-bar-fill { background: linear-gradient(90deg, var(--chart-blue), #A0D8EF); }
+.bar-salud .stat-bar-fill { background: linear-gradient(90deg, #2ECC71, #27AE60); }
+.bar-mente .stat-bar-fill { background: linear-gradient(90deg, var(--chart-blue), #5499AC); }
+.bar-vida .stat-bar-fill { background: linear-gradient(90deg, var(--chart-brown), #C4A882); }
+
+.stat-bar-lg { height: 10px; border-radius: 5px; }
+
+/* Badges */
+.rank-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  font-size: 13px; font-weight: 900;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+}
+.rank-E { color: var(--rank-e); }
+.rank-D { color: var(--rank-d); }
+.rank-C { color: var(--rank-c); }
+.rank-B { color: var(--rank-b); }
+.rank-A { color: var(--rank-a); }
+.rank-S { color: var(--rank-s); text-shadow: 0 0 8px var(--rank-s); }
+
+/* Type badges */
+.type-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; padding: 3px 8px;
+  border-radius: 2px;
+}
+.type-salud { background: rgba(46,204,113,0.15); color: #2ECC71; border: 1px solid rgba(46,204,113,0.3); }
+.type-mente { background: rgba(103,156,188,0.15); color: var(--chart-blue); border: 1px solid rgba(103,156,188,0.3); }
+.type-vida { background: rgba(163,133,96,0.15); color: var(--chart-brown); border: 1px solid rgba(163,133,96,0.3); }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px; padding: 11px 20px;
+  font-size: 11px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; border-radius: var(--radius);
+  transition: var(--transition);
+}
+.btn-primary {
+  background: var(--accent);
+  color: var(--gold);
+}
+.btn-primary:hover { background: #D41F28; transform: translateY(-1px); box-shadow: 0 4px 16px var(--accent-glow); }
+.btn-primary:active { transform: translateY(0); }
+.btn-secondary {
+  background: transparent;
+  color: var(--gray);
+  border: 1px solid var(--border-bright);
+}
+.btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+.btn-ghost { background: transparent; color: var(--chart-brown); font-size: 11px; padding: 6px 12px; }
+.btn-success {
+  background: rgba(46,204,113,0.15);
+  color: #2ECC71; border: 1px solid rgba(46,204,113,0.3);
+}
+.btn-full { width: 100%; }
+
+/* Task Items */
+.task-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.task-item:last-child { border-bottom: none; }
+.task-check {
+  width: 20px; height: 20px; min-width: 20px;
+  border: 2px solid var(--border-bright);
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: var(--transition);
+}
+.task-check.done {
+  background: var(--accent); border-color: var(--accent);
+}
+.task-check.done::after { content: '✓'; color: white; font-size: 12px; font-weight: 900; }
+.task-label { flex: 1; font-size: 13px; color: var(--gray); line-height: 1.4; }
+.task-label.done { text-decoration: line-through; color: rgba(224,224,224,0.4); }
+.task-xp { font-size: 10px; font-weight: 700; color: var(--chart-blue); font-family: var(--mono); }
+
+/* Section headers */
+.section-header {
+  padding: 16px 16px 8px;
+  font-size: 9px; font-weight: 700; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--chart-brown);
+  display: flex; align-items: center; gap: 10px;
+}
+.section-header::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* Notification toast */
+#toast {
+  position: fixed; top: calc(var(--header-h) + 8px);
+  left: 50%; transform: translateX(-50%);
+  background: rgba(22,48,43,0.97);
+  border: 1px solid var(--border-bright);
+  color: var(--gold); font-size: 12px; font-weight: 500;
+  padding: 10px 20px; border-radius: var(--radius);
+  z-index: 1000;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s;
+  max-width: 300px; text-align: center;
+  white-space: nowrap;
+  border-top: 2px solid var(--accent);
+}
+#toast.show { opacity: 1; }
+
+/* Modals */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(3,17,13,0.92);
+  display: none; align-items: flex-end;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.open { display: flex; }
+.modal-sheet {
+  width: 100%; max-width: 480px;
+  background: var(--bg-1);
+  border: 1px solid var(--border-bright);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  padding: 20px 16px;
+  max-height: 88vh; overflow-y: auto;
+  animation: slideUp 0.25s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.modal-handle {
+  width: 40px; height: 4px;
+  background: var(--border-bright);
+  border-radius: 2px; margin: 0 auto 20px;
+}
+.modal-title {
+  font-size: 13px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--gold);
+  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 10px;
+}
+.modal-close {
+  margin-left: auto; background: transparent;
+  color: var(--gray); font-size: 18px; padding: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SCREEN: HOME
+═══════════════════════════════════════════════════════ */
+#screen-home { padding: 12px 12px 80px; display: none; }
+#screen-home.active { display: block; }
+
+.char-card {
+  background: linear-gradient(135deg, rgba(12,50,74,0.8) 0%, rgba(3,17,13,0.9) 100%);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 12px;
+  position: relative; overflow: hidden;
+}
+.char-card::before {
+  content: ''; position: absolute;
+  top: 0; right: 0; width: 120px; height: 120px;
+  background: radial-gradient(circle, rgba(193,23,32,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.char-top { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.char-avatar {
+  width: 56px; height: 56px;
+  border-radius: var(--radius);
+  border: 2px solid var(--border-bright);
+  background: var(--bg-3);
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; cursor: pointer;
+  flex-shrink: 0;
+}
+.char-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.char-info { flex: 1; min-width: 0; }
+.char-name {
+  font-size: 15px; font-weight: 900; color: var(--gold);
+  letter-spacing: 1px; text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.char-rank-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.char-rank-label { font-size: 10px; color: var(--gray); }
+.char-xp-label { font-size: 10px; font-family: var(--mono); color: var(--chart-blue); margin-left: auto; }
+
+.char-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.mini-stat {
+  background: rgba(0,0,0,0.3); border-radius: var(--radius);
+  padding: 8px; text-align: center;
+}
+.mini-stat-val {
+  font-size: 15px; font-weight: 900; font-family: var(--mono);
+  margin-bottom: 3px;
+}
+.mini-stat-label { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--gray); opacity: 0.7; }
+.mini-stat.salud .mini-stat-val { color: #2ECC71; }
+.mini-stat.mente .mini-stat-val { color: var(--chart-blue); }
+.mini-stat.vida .mini-stat-val { color: var(--chart-brown); }
+
+.hp-section { margin-bottom: 16px; }
+.hp-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.hp-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; }
+.hp-val { font-size: 11px; font-family: var(--mono); color: var(--gold); }
+
+/* Mission Slots */
+.mission-slots { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.mission-slot {
+  background: rgba(22,48,43,0.6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.mission-slot-header {
+  padding: 10px 12px;
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer;
+}
+.mission-slot-icon { font-size: 18px; }
+.mission-slot-info { flex: 1; min-width: 0; }
+.mission-slot-name {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--gold);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mission-slot-sub { font-size: 10px; color: var(--gray); opacity: 0.7; margin-top: 2px; }
+.mission-slot-progress {
+  font-size: 10px; font-family: var(--mono);
+  color: var(--chart-blue); text-align: right;
+}
+.mission-slot-empty {
+  padding: 20px 12px; text-align: center;
+  border: 1px dashed var(--border); border-radius: var(--radius-lg);
+}
+.mission-slot-empty .empty-label { font-size: 11px; color: var(--gray); opacity: 0.5; margin-top: 4px; }
+
+.mission-tasks { padding: 0 12px 12px; border-top: 1px solid var(--border); }
+
+/* Daily/Weekly toggle */
+.tasks-header { display: flex; align-items: center; gap: 8px; padding: 10px 0 8px; }
+.tasks-toggle { display: flex; gap: 4px; }
+.tasks-toggle button {
+  padding: 4px 10px; font-size: 9px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase;
+  border-radius: 2px; transition: var(--transition);
+  border: 1px solid var(--border);
+  background: transparent; color: var(--gray);
+}
+.tasks-toggle button.active { background: var(--accent); color: var(--gold); border-color: var(--accent); }
+
+/* Streak */
+.streak-bar {
+  display: flex; gap: 4px; align-items: center;
+  padding: 12px 16px;
+  overflow-x: auto;
+}
+.streak-day {
+  width: 28px; height: 28px; min-width: 28px;
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+  border: 1px solid var(--border);
+}
+.streak-day.completed { background: var(--accent); border-color: var(--accent); color: white; }
+.streak-day.today { border-color: var(--gold); color: var(--gold); }
+.streak-day.missed { background: rgba(57,5,23,0.5); border-color: var(--accent); color: var(--accent); opacity: 0.5; }
+
+/* ═══════════════════════════════════════════════════════
+   SCREEN: AI CHAT / MISSIONS
+═══════════════════════════════════════════════════════ */
+#screen-missions {
+  display: none; flex-direction: column;
+  padding: 0; height: 100%;
+}
+#screen-missions.active { display: flex; }
+
+.chat-container {
+  flex: 1; overflow-y: auto;
+  padding: 12px 12px 8px;
+  display: flex; flex-direction: column;
+  gap: 10px;
+}
+.chat-msg {
+  display: flex; gap: 10px; align-items: flex-start;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
+.chat-msg.user { flex-direction: row-reverse; }
+.chat-avatar-sm {
+  width: 30px; height: 30px; min-width: 30px;
+  border-radius: var(--radius); overflow: hidden;
+  background: var(--bg-3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.chat-bubble {
+  max-width: 78%; padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  font-size: 13px; line-height: 1.5;
+}
+.chat-bubble.ai {
+  background: rgba(12,50,74,0.7);
+  border: 1px solid var(--border);
+  color: var(--gray);
+  border-radius: 4px 12px 12px 12px;
+}
+.chat-bubble.user {
+  background: rgba(193,23,32,0.25);
+  border: 1px solid rgba(193,23,32,0.4);
+  color: var(--gold);
+  border-radius: 12px 4px 12px 12px;
+}
+.chat-bubble pre {
+  white-space: pre-wrap; font-family: var(--mono);
+  font-size: 11px; margin-top: 8px; padding: 8px;
+  background: rgba(0,0,0,0.3); border-radius: 4px;
+}
+.typing-indicator { display: flex; gap: 4px; padding: 4px 0; }
+.typing-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--chart-blue);
+  animation: bounce 1.2s infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce {
+  0%,80%,100% { transform: translateY(0); opacity: 0.5; }
+  40% { transform: translateY(-6px); opacity: 1; }
+}
+
+.chat-input-area {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  background: rgba(3,17,13,0.95);
+}
+.chat-input-row { display: flex; gap: 8px; align-items: flex-end; }
+.chat-input {
+  flex: 1; resize: none;
+  padding: 10px 14px; min-height: 42px; max-height: 100px;
+  font-size: 13px; line-height: 1.4;
+  border-radius: 20px;
+  background: rgba(22,48,43,0.6);
+  border: 1px solid var(--border-bright);
+  color: var(--gold);
+}
+.chat-input::placeholder { color: rgba(224,224,224,0.35); }
+.chat-send {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: var(--transition); flex-shrink: 0;
+}
+.chat-send:hover { background: #D41F28; transform: scale(1.05); }
+.chat-send:disabled { opacity: 0.4; }
+
+.api-setup {
+  padding: 16px 12px;
+  background: rgba(57,5,23,0.3);
+  border: 1px solid rgba(193,23,32,0.2);
+  border-radius: var(--radius-lg);
+  margin: 12px;
+}
+.api-setup-title { font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: 1px; margin-bottom: 10px; }
+.input-field {
+  width: 100%; padding: 10px 12px;
+  margin-bottom: 8px; border-radius: var(--radius);
+}
+.input-label { font-size: 10px; color: var(--gray); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+
+/* Mission Preview Card */
+.mission-preview {
+  background: linear-gradient(135deg, rgba(57,5,23,0.6), rgba(12,50,74,0.4));
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-lg);
+  padding: 14px; margin: 0 12px 12px;
+}
+.mission-preview-title {
+  font-size: 12px; font-weight: 900; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--gold);
+  margin-bottom: 4px;
+}
+.mission-preview-desc { font-size: 12px; color: var(--gray); line-height: 1.4; margin-bottom: 12px; }
+.mission-phase { margin-bottom: 10px; }
+.mission-phase-name { font-size: 10px; font-weight: 700; color: var(--chart-brown); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+.mission-task-list { padding-left: 0; list-style: none; }
+.mission-task-list li {
+  font-size: 12px; color: var(--gray); padding: 3px 0;
+  padding-left: 14px; position: relative;
+}
+.mission-task-list li::before { content: '▸'; position: absolute; left: 0; color: var(--accent); }
+
+/* ═══════════════════════════════════════════════════════
+   SCREEN: STATS
+═══════════════════════════════════════════════════════ */
+#screen-stats { display: none; padding: 12px 12px 80px; }
+#screen-stats.active { display: block; }
+
+.stat-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.stat-card-title {
+  font-size: 9px; font-weight: 700; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--chart-brown);
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.stat-card-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.chart-wrap { position: relative; height: 180px; }
+.chart-wrap-sm { position: relative; height: 130px; }
+
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.stat-kpi {
+  background: var(--bg-1); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 12px 10px; text-align: center;
+}
+.stat-kpi-val {
+  font-size: 22px; font-weight: 900; font-family: var(--mono);
+  color: var(--gold); line-height: 1;
+}
+.stat-kpi-label { font-size: 9px; letter-spacing: 1px; color: var(--gray); opacity: 0.6; margin-top: 4px; text-transform: uppercase; }
+
+.progress-list { display: flex; flex-direction: column; gap: 12px; }
+.progress-item {}
+.progress-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.progress-name { font-size: 12px; color: var(--gray); }
+.progress-pct { font-size: 11px; font-family: var(--mono); color: var(--chart-blue); }
+
+/* ═══════════════════════════════════════════════════════
+   SCREEN: PROFILE
+═══════════════════════════════════════════════════════ */
+#screen-profile { display: none; padding: 12px 12px 80px; }
+#screen-profile.active { display: block; }
+
+.profile-hero {
+  background: linear-gradient(160deg, rgba(12,50,74,0.7) 0%, rgba(57,5,23,0.5) 100%);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius-lg);
+  padding: 20px 16px;
+  margin-bottom: 12px; text-align: center;
+}
+.profile-avatar-wrap {
+  width: 80px; height: 80px;
+  margin: 0 auto 12px;
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--border-bright);
+  background: var(--bg-3);
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; cursor: pointer;
+  position: relative;
+}
+.profile-avatar-wrap:hover::after {
+  content: '✎'; position: absolute; inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; color: var(--gold);
+}
+.profile-avatar-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.profile-name { font-size: 20px; font-weight: 900; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; }
+.profile-rank-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 8px 0; }
+.profile-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+.profile-stat { text-align: center; }
+.profile-stat-val { font-size: 18px; font-weight: 900; font-family: var(--mono); color: var(--chart-blue); }
+.profile-stat-lbl { font-size: 9px; letter-spacing: 1px; color: var(--gray); opacity: 0.6; text-transform: uppercase; }
+
+.settings-section { margin-bottom: 12px; }
+.settings-item {
+  background: var(--bg-1); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px;
+  margin-bottom: 6px; display: flex; align-items: center; gap: 12px;
+}
+.settings-item-icon { font-size: 18px; }
+.settings-item-info { flex: 1; }
+.settings-item-label { font-size: 12px; font-weight: 500; color: var(--gold); }
+.settings-item-desc { font-size: 10px; color: var(--gray); opacity: 0.6; margin-top: 2px; }
+.settings-item-action { color: var(--chart-blue); font-size: 12px; }
+
+/* Toggle */
+.toggle {
+  width: 44px; height: 24px;
+  background: rgba(0,0,0,0.4);
+  border-radius: 12px; border: 1px solid var(--border-bright);
+  position: relative; cursor: pointer; transition: var(--transition);
+}
+.toggle.on { background: var(--accent); border-color: var(--accent); }
+.toggle::after {
+  content: ''; position: absolute;
+  width: 18px; height: 18px;
+  background: white; border-radius: 50%;
+  top: 2px; left: 2px; transition: var(--transition);
+}
+.toggle.on::after { transform: translateX(20px); }
+
+/* API Config form */
+.api-config-form { padding: 0; }
+.api-row { margin-bottom: 10px; }
+.api-row label { display: block; font-size: 10px; letter-spacing: 1px; color: var(--gray); text-transform: uppercase; margin-bottom: 4px; }
+.api-row input, .api-row select { width: 100%; padding: 10px 12px; }
+.api-row select option { background: var(--bg-0); }
+
+/* ═══════════════════════════════════════════════════════
+   SCREEN: ARENA (MULTIPLAYER)
+═══════════════════════════════════════════════════════ */
+#screen-arena { display: none; padding: 12px 12px 80px; }
+#screen-arena.active { display: block; }
+
+.arena-header {
+  background: linear-gradient(135deg, rgba(57,5,23,0.8), rgba(3,17,13,0.9));
+  border: 1px solid rgba(193,23,32,0.3);
+  border-radius: var(--radius-lg);
+  padding: 16px; margin-bottom: 12px; text-align: center;
+}
+.arena-title { font-size: 14px; font-weight: 900; letter-spacing: 4px; color: var(--gold); text-transform: uppercase; }
+.arena-sub { font-size: 10px; color: var(--gray); opacity: 0.6; margin-top: 4px; }
+
+.leaderboard { }
+.lb-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px; margin-bottom: 6px;
+  background: var(--bg-1); border: 1px solid var(--border);
+  border-radius: var(--radius); transition: var(--transition);
+}
+.lb-row.me { border-color: rgba(193,23,32,0.4); background: rgba(57,5,23,0.4); }
+.lb-pos { font-size: 14px; font-weight: 900; font-family: var(--mono); color: var(--gray); width: 24px; }
+.lb-pos.gold { color: #FFD700; }
+.lb-pos.silver { color: #C0C0C0; }
+.lb-pos.bronze { color: #CD7F32; }
+.lb-avatar { width: 36px; height: 36px; border-radius: var(--radius); overflow: hidden; background: var(--bg-3); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.lb-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.lb-info { flex: 1; }
+.lb-name { font-size: 13px; font-weight: 700; color: var(--gold); }
+.lb-sub { font-size: 10px; color: var(--gray); opacity: 0.6; margin-top: 1px; }
+.lb-xp { font-size: 13px; font-weight: 700; font-family: var(--mono); color: var(--chart-blue); }
+
+.invite-card {
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px;
+}
+.invite-link-box {
+  display: flex; gap: 8px; align-items: center;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 10px 12px; margin: 10px 0;
+}
+.invite-link-text { flex: 1; font-size: 11px; font-family: var(--mono); color: var(--chart-blue); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.copy-btn { font-size: 11px; font-weight: 700; color: var(--gold); background: transparent; padding: 4px 8px; border: 1px solid var(--border-bright); border-radius: 3px; }
+
+/* Sync status */
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.sync-dot.live { background: #2ECC71; animation: pulse 2s infinite; }
+.sync-dot.idle { background: var(--gray); opacity: 0.4; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+/* ═══════════════════════════════════════════════════════
+   SETUP SCREEN (First Launch)
+═══════════════════════════════════════════════════════ */
+#setup-screen {
+  position: fixed; inset: 0; z-index: 800;
+  background: var(--bg-0);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 24px;
+}
+.setup-logo {
+  font-size: 12px; font-weight: 900; letter-spacing: 6px;
+  color: var(--gold); text-transform: uppercase; text-align: center;
+  margin-bottom: 6px;
+}
+.setup-logo span { color: var(--accent); }
+.setup-tag { font-size: 10px; color: var(--gray); opacity: 0.5; letter-spacing: 3px; text-align: center; margin-bottom: 40px; }
+.setup-form { width: 100%; max-width: 360px; }
+.setup-step { display: none; }
+.setup-step.active { display: block; }
+.setup-question { font-size: 16px; font-weight: 700; color: var(--gold); margin-bottom: 6px; }
+.setup-hint { font-size: 12px; color: var(--gray); opacity: 0.6; margin-bottom: 20px; }
+.setup-input {
+  width: 100%; padding: 14px 16px;
+  font-size: 16px; color: var(--gold);
+  background: rgba(22,48,43,0.4);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius-lg); margin-bottom: 16px;
+}
+.setup-types { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+.setup-type-btn {
+  background: rgba(22,48,43,0.4); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 16px 8px; text-align: center;
+  cursor: pointer; transition: var(--transition);
+}
+.setup-type-btn.selected { border-color: var(--accent); background: rgba(193,23,32,0.15); }
+.setup-type-icon { font-size: 24px; margin-bottom: 6px; }
+.setup-type-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--gold); text-transform: uppercase; }
+.setup-progress { display: flex; gap: 6px; margin-bottom: 30px; }
+.setup-prog-dot { width: 24px; height: 3px; background: var(--border); border-radius: 2px; transition: var(--transition); }
+.setup-prog-dot.done { background: var(--accent); }
+
+/* ═══════════════════════════════════════════════════════
+   LEVEL UP MODAL
+═══════════════════════════════════════════════════════ */
+#levelup-modal {
+  position: fixed; inset: 0; z-index: 900;
+  background: rgba(0,0,0,0.9);
+  display: none; align-items: center; justify-content: center;
+  flex-direction: column;
+}
+#levelup-modal.show { display: flex; animation: fadeIn 0.3s ease; }
+.levelup-content { text-align: center; }
+.levelup-ring {
+  width: 120px; height: 120px; margin: 0 auto 20px;
+  border-radius: 50%; border: 3px solid var(--rank-s);
+  display: flex; align-items: center; justify-content: center;
+  animation: spin-glow 2s linear infinite;
+  box-shadow: 0 0 30px var(--rank-s), inset 0 0 20px rgba(255,215,0,0.1);
+}
+@keyframes spin-glow { 0%{box-shadow:0 0 20px var(--rank-s);} 50%{box-shadow:0 0 40px var(--rank-s), 0 0 60px var(--rank-a);} 100%{box-shadow:0 0 20px var(--rank-s);} }
+.levelup-lv { font-size: 48px; font-weight: 900; color: var(--gold); font-family: var(--mono); }
+.levelup-title { font-size: 11px; font-weight: 700; letter-spacing: 6px; color: var(--rank-s); text-transform: uppercase; margin-bottom: 8px; }
+.levelup-text { font-size: 20px; font-weight: 900; color: var(--gold); margin-bottom: 6px; }
+.levelup-sub { font-size: 13px; color: var(--gray); margin-bottom: 30px; }
+
+/* Responsive adjustments */
+@media (min-width: 481px) {
+  #app { border: 1px solid var(--border); box-shadow: 0 0 60px rgba(0,0,0,0.8); }
+}
+@media (max-height: 600px) {
+  :root { --header-h: 52px; --nav-h: 56px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Setup Screen -->
+<div id="setup-screen">
+  <div class="setup-logo">SAGA DE <span>HÁBITOS</span></div>
+  <div class="setup-tag">SISTEMA RPG · SOLO LEVELING</div>
+  <div class="setup-form">
+    <div class="setup-progress" id="setup-progress">
+      <div class="setup-prog-dot done"></div>
+      <div class="setup-prog-dot"></div>
+      <div class="setup-prog-dot"></div>
+    </div>
+    <!-- Step 1: Name -->
+    <div class="setup-step active" id="setup-1">
+      <div class="setup-question">¿Cómo te llamas, Cazador?</div>
+      <div class="setup-hint">Este será tu nombre en la Saga</div>
+      <input class="setup-input" id="setup-name" placeholder="Tu nombre" maxlength="20">
+      <button class="btn btn-primary btn-full" onclick="setupNext(1)">CONTINUAR</button>
+    </div>
+    <!-- Step 2: Class -->
+    <div class="setup-step" id="setup-2">
+      <div class="setup-question">Elige tu clase inicial</div>
+      <div class="setup-hint">Puedes desarrollar todas las áreas después</div>
+      <div class="setup-types" id="setup-class">
+        <div class="setup-type-btn" data-class="guerrero" onclick="selectClass(this)">
+          <div class="setup-type-icon">⚔️</div>
+          <div class="setup-type-label">Guerrero</div>
+        </div>
+        <div class="setup-type-btn" data-class="sabio" onclick="selectClass(this)">
+          <div class="setup-type-icon">📚</div>
+          <div class="setup-type-label">Sabio</div>
+        </div>
+        <div class="setup-type-btn" data-class="monje" onclick="selectClass(this)">
+          <div class="setup-type-icon">🧘</div>
+          <div class="setup-type-label">Monje</div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="setupNext(2)">CONTINUAR</button>
+    </div>
+    <!-- Step 3: API -->
+    <div class="setup-step" id="setup-3">
+      <div class="setup-question">Modo gratuito (sin API keys)</div>
+      <div class="setup-hint">Usa ChatGPT / Claude / Gemini / Perplexity en su modo gratis. La app te dará un prompt y tú pegas el JSON de la misión.</div>
+      <div style="background:rgba(0,0,0,0.35);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin:10px 0;color:var(--gray);font-size:12px;line-height:1.35">
+        <b>Regla:</b> esta app nunca te pedirá una API key.
+        <br><br>
+        <b>Flujo:</b> describe tu hábito → copia el prompt → pégalo en tu IA gratis → pega aquí el JSON en Misiones.
+      </div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="setupFinish()">COMENZAR SAGA</button>
+      <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="setupFinish()">Saltar por ahora</button>
+    </div>
+  </div>
+</div>
+
+<!-- Level Up Modal -->
+<div id="levelup-modal">
+  <div class="levelup-content">
+    <div class="levelup-title">¡Nivel Alcanzado!</div>
+    <div class="levelup-ring"><span class="levelup-lv" id="lu-level">2</span></div>
+    <div class="levelup-text" id="lu-text">¡HAS SUBIDO DE NIVEL!</div>
+    <div class="levelup-sub" id="lu-sub">Rango E → D</div>
+    <button class="btn btn-primary" style="min-width:180px" onclick="closeLevelUp()">CONTINUAR</button>
+  </div>
+</div>
+
+<!-- Notification Toast -->
+<div id="toast"></div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none">
+  <!-- Header -->
+  <header id="header">
+    <div class="header-logo">SAGA <span>DE</span> HÁBITOS</div>
+    <div id="header-rank" class="header-rank-badge rank-E">E</div>
+    <div class="header-level">
+      <div class="lv">NIVEL</div>
+      <div id="header-level-num" style="font-size:16px;font-weight:900;color:var(--gold);font-family:var(--mono)">1</div>
+    </div>
+  </header>
+
+  <!-- Screens -->
+  <main id="screens">
+
+    <!-- ▓▓▓ HOME ▓▓▓ -->
+    <div id="screen-home" class="screen">
+      <!-- Character Card -->
+      <div style="padding:12px 12px 0">
+        <div class="char-card">
+          <div class="char-top">
+            <div class="char-avatar" id="home-avatar" onclick="goToProfile()">⚔️</div>
+            <div class="char-info">
+              <div class="char-name" id="home-name">CAZADOR</div>
+              <div class="char-rank-row">
+                <span class="rank-badge rank-E" id="home-rank">E</span>
+                <span style="font-size:10px;color:var(--gray);opacity:0.6">RANGO</span>
+                <span class="char-xp-label" id="home-xp-label">0 / 1000 XP</span>
+              </div>
+              <div style="margin-top:6px">
+                <div class="stat-bar bar-xp"><div class="stat-bar-fill" id="home-xp-bar" style="width:0%"></div></div>
+              </div>
+            </div>
+          </div>
+          <!-- HP -->
+          <div class="hp-section">
+            <div class="hp-row">
+              <span class="hp-label">♥ PUNTOS DE VIDA</span>
+              <span class="hp-val" id="home-hp-val">100 / 100</span>
+            </div>
+            <div class="stat-bar stat-bar-lg bar-hp">
+              <div class="stat-bar-fill" id="home-hp-bar" style="width:100%"></div>
+            </div>
+          </div>
+          <!-- Stats -->
+          <div class="char-stats">
+            <div class="mini-stat salud">
+              <div class="mini-stat-val" id="stat-salud">0</div>
+              <div class="mini-stat-label">Salud</div>
+            </div>
+            <div class="mini-stat mente">
+              <div class="mini-stat-val" id="stat-mente">0</div>
+              <div class="mini-stat-label">Mente</div>
+            </div>
+            <div class="mini-stat vida">
+              <div class="mini-stat-val" id="stat-vida">0</div>
+              <div class="mini-stat-label">Vida</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Streak Row -->
+      <div class="section-header">Racha · 7 días</div>
+      <div class="streak-bar" id="streak-bar"></div>
+
+      <!-- Active Missions -->
+      <div class="section-header">Misiones Activas</div>
+      <div class="mission-slots" id="mission-slots" style="padding:0 12px 12px"></div>
+    </div>
+
+    <!-- ▓▓▓ MISSIONS / AI CHAT ▓▓▓ -->
+    <div id="screen-missions" class="screen">
+      <!-- API not set warning -->
+      <div id="api-warning" class="api-setup" style="display:flex;flex-direction:column">
+        <div class="api-setup-title">🆓 MODO GRATUITO (SIN API KEYS)</div>
+        <p style="font-size:12px;color:var(--gray);margin-bottom:10px;line-height:1.35">
+          Aquí no hay llaves, no hay pagos. Tú usas tu IA favorita en modo gratis. La app te arma un <b>prompt</b> y tú pegas el <b>JSON</b> de la misión.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <button class="btn btn-secondary" onclick="copyFreePrompt()">COPIAR PROMPT</button>
+          <button class="btn btn-primary" onclick="toggleImportBox()">PEGAR JSON</button>
+        </div>
+        <div id="import-box" style="display:none">
+          <div style="font-size:11px;color:var(--gray);margin:6px 0 6px">Pega la misión JSON (estricta, sin markdown). Debe ser <b>type</b>: salud | mente | vida, con 3 fases.</div>
+          <textarea id="import-json" class="chat-input" style="height:120px;max-height:200px" placeholder='{"type":"salud", "sagaName":"...", "missions":[...]}'></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-primary" style="flex:1" onclick="importMissionJson()">IMPORTAR MISIÓN</button>
+            <button class="btn btn-ghost" onclick="toggleImportBox()">CERRAR</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mission Preview (when AI generates) --> (when AI generates) -->
+      <div id="mission-preview-area" style="display:none"></div>
+
+      <!-- Chat -->
+      <div class="chat-container" id="chat-messages"></div>
+
+      <!-- Input -->
+      <div class="chat-input-area">
+        <div style="font-size:9px;letter-spacing:2px;color:var(--chart-brown);margin-bottom:6px;text-transform:uppercase">● IA Generadora de Misiones</div>
+        <div class="chat-input-row">
+          <textarea class="chat-input" id="chat-input" placeholder="Ej: Quiero un hábito de ejercicio diario, empezar a meditar, leer más..." rows="1" onkeydown="chatKeyDown(event)"></textarea>
+          <button class="chat-send" id="chat-send-btn" onclick="sendChat()">➤</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▓▓▓ STATS ▓▓▓ -->
+    <div id="screen-stats" class="screen">
+      <div style="padding:12px 12px 0">
+        <!-- KPIs -->
+        <div class="stats-grid" id="kpi-grid">
+          <div class="stat-kpi"><div class="stat-kpi-val" id="kpi-xp">0</div><div class="stat-kpi-label">XP Total</div></div>
+          <div class="stat-kpi"><div class="stat-kpi-val" id="kpi-tasks">0</div><div class="stat-kpi-label">Tareas</div></div>
+          <div class="stat-kpi"><div class="stat-kpi-val" id="kpi-streak">0</div><div class="stat-kpi-label">Racha</div></div>
+        </div>
+        <!-- Radar Chart -->
+        <div class="stat-card">
+          <div class="stat-card-title">Distribución de Stats</div>
+          <div class="chart-wrap"><canvas id="radar-chart"></canvas></div>
+        </div>
+        <!-- XP Line Chart -->
+        <div class="stat-card">
+          <div class="stat-card-title">Racha (últimos 30 días)</div>
+          <div class="chart-wrap"><canvas id="xp-chart"></canvas></div>
+        </div>
+        <!-- Completion Bar -->
+        <div class="stat-card">
+          <div class="stat-card-title">Progreso por STAT</div>
+          <div class="chart-wrap-sm"><canvas id="bar-chart"></canvas></div>
+        </div>
+        <!-- Progress per stat -->
+        <div class="stat-card">
+          <div class="stat-card-title">Progreso por Área</div>
+          <div class="progress-list" id="progress-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▓▓▓ PROFILE ▓▓▓ -->
+    <div id="screen-profile" class="screen">
+      <div style="padding:12px 12px 0">
+        <div class="profile-hero">
+          <div class="profile-avatar-wrap" id="profile-avatar-wrap" onclick="changeAvatar()">⚔️
+            <input type="file" id="avatar-input" accept="image/*" style="display:none" onchange="handleAvatarChange(event)">
+          </div>
+          <div class="profile-name" id="profile-name">CAZADOR</div>
+          <div class="profile-rank-row">
+            <span class="rank-badge rank-E" id="profile-rank">E</span>
+            <span style="font-size:12px;color:var(--gray)">Rango</span>
+            <span style="font-size:12px;color:var(--gold);font-family:var(--mono)">·</span>
+            <span style="font-size:12px;font-weight:700;color:var(--gold);font-family:var(--mono)" id="profile-level">Lv.1</span>
+          </div>
+          <div class="profile-stats-row">
+            <div class="profile-stat">
+              <div class="profile-stat-val" id="p-xp">0</div>
+              <div class="profile-stat-lbl">XP Total</div>
+            </div>
+            <div class="profile-stat">
+              <div class="profile-stat-val" id="p-days">0</div>
+              <div class="profile-stat-lbl">Días Activo</div>
+            </div>
+            <div class="profile-stat">
+              <div class="profile-stat-val" id="p-streak">0</div>
+              <div class="profile-stat-lbl">Racha Max</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- API Config -->
+        <div class="section-header">Configuración IA</div>
+        <div class="panel" style="margin-bottom:12px">
+          <div class="api-config-form">
+            <div class="api-row">
+              <label>Proveedor IA</label>
+              <select id="prof-provider" class="input-field" style="width:100%;padding:10px 12px;">
+                <option value="claude">Claude (Anthropic)</option>
+                <option value="openai">ChatGPT (OpenAI)</option>
+              </select>
+            </div>
+            <div class="api-row">
+              <label>API Key</label>
+              <input type="password" id="prof-apikey" class="input-field" style="width:100%;padding:10px 12px;" placeholder="Tu API Key">
+            </div>
+            <button class="btn btn-primary" style="margin-top:4px" onclick="saveApiConfig()">GUARDAR API</button>
+          </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="section-header">Ajustes</div>
+        <div class="settings-section">
+          <div class="settings-item">
+            <div class="settings-item-icon">🔔</div>
+            <div class="settings-item-info">
+              <div class="settings-item-label">Notificaciones</div>
+              <div class="settings-item-desc">Recordatorios diarios y semanales</div>
+            </div>
+            <div class="toggle" id="notif-toggle" onclick="toggleNotifications()"></div>
+          </div>
+          <div class="settings-item">
+            <div class="settings-item-icon">🌙</div>
+            <div class="settings-item-info">
+              <div class="settings-item-label">Modo Oscuro</div>
+              <div class="settings-item-desc">Ajustar paleta de colores</div>
+            </div>
+            <div class="toggle on" id="dark-toggle" onclick="toggleDark()"></div>
+          </div>
+          <div class="settings-item" onclick="editName()">
+            <div class="settings-item-icon">✏️</div>
+            <div class="settings-item-info">
+              <div class="settings-item-label">Cambiar Nombre</div>
+              <div class="settings-item-desc" id="name-display">Cazador</div>
+            </div>
+            <div class="settings-item-action">›</div>
+          </div>
+          <div class="settings-item" onclick="resetData()" style="cursor:pointer">
+            <div class="settings-item-icon">🗑️</div>
+            <div class="settings-item-info">
+              <div class="settings-item-label">Reiniciar Datos</div>
+              <div class="settings-item-desc">Borrar todo y empezar de nuevo</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Multiplayer -->
+        <div class="section-header">Multijugador (Arena)</div>
+        <div class="panel" style="margin-bottom:12px">
+          <div style="font-size:12px;color:var(--gray);line-height:1.35">
+            Para invitar amigos, crea una sala en <b>Arena</b> y comparte el link. No necesitas configurar nada aquí.
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--gray)">
+            Sala actual: <span style="color:var(--gold);font-family:var(--mono)" id="current-room-label">—</span>
+          </div>
+          <button class="btn btn-secondary" style="margin-top:10px" onclick="goArena()">IR A ARENA</button>
+        </div>
+
+        <div style="height:20px"></div>
+      </div>
+    </div>
+
+    <!-- ▓▓▓ ARENA ▓▓▓ -->
+    <div id="screen-arena" class="screen">
+      <div style="padding:12px 12px 0">
+        <div class="arena-header">
+          <div class="arena-title">⚔ ARENA</div>
+          <div class="arena-sub">Compite · Invita · Supera</div>
+          <div style="margin-top:8px;font-size:11px;color:var(--gray)">
+            <span class="sync-dot idle" id="sync-dot"></span>
+            <span id="sync-status">Sin sincronización</span>
+          </div>
+        </div>
+
+        <!-- Invite Card -->
+        <div class="invite-card">
+          <div class="panel-title">Invitar Amigos</div>
+          <p style="font-size:12px;color:var(--gray);margin-bottom:10px">Comparte tu perfil para competir en el leaderboard familiar.</p>
+          <div class="invite-link-box">
+            <span class="invite-link-text" id="invite-link">Genera un link de invitación...</span>
+            <button class="copy-btn" onclick="copyInvite()">COPIAR</button>
+          </div>
+          <button class="btn btn-primary" onclick="generateInvite()" style="width:100%;margin-top:8px">GENERAR LINK</button>
+        </div>
+
+        <!-- Leaderboard -->
+        <div class="section-header">Clasificación</div>
+        <div id="leaderboard" class="leaderboard"></div>
+
+        <!-- Join from link -->
+        <div class="section-header">Unirse a Grupo</div>
+        <div class="panel" style="margin-bottom:12px">
+          <div style="font-size:12px;color:var(--gray);margin-bottom:10px">Ingresa el ID de grupo de un amigo:</div>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="join-code" class="input-field" style="flex:1;padding:10px 12px" placeholder="ID de grupo">
+            <button class="btn btn-primary" onclick="joinGroup()">UNIRSE</button>
+          </div>
+        </div>
+
+        <div style="height:20px"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav id="bottom-nav">
+    <button class="nav-btn active" onclick="navigate('home')" id="nav-home">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span class="nav-label">Inicio</span>
+    </button>
+    <button class="nav-btn" onclick="navigate('missions')" id="nav-missions">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+      <span class="nav-label">Misión</span>
+    </button>
+    <button class="nav-btn" onclick="navigate('stats')" id="nav-stats">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg>
+      <span class="nav-label">Stats</span>
+    </button>
+    <button class="nav-btn" onclick="navigate('profile')" id="nav-profile">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      <span class="nav-label">Perfil</span>
+    </button>
+    <button class="nav-btn" onclick="navigate('arena')" id="nav-arena">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+      <span class="nav-label">Arena</span>
+    </button>
+  </nav>
+</div>
+
+<!-- Modal: Mission Detail -->
+<div class="modal-overlay" id="modal-mission" onclick="closeMissionModal(event)">
+  <div class="modal-sheet" onclick="e=>e.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      <span id="modal-mission-title">MISIÓN</span>
+      <button class="modal-close" onclick="closeMissionModal()">✕</button>
+    </div>
+    <div id="modal-mission-content"></div>
+  </div>
+</div>
+
+<!-- Modal: Level Up -->
+<div class="modal-overlay" id="modal-lu" onclick="closeModal('modal-lu')">
+  <div class="modal-sheet" onclick="e=>e.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div style="text-align:center;padding:20px 0">
+      <div style="font-size:48px;margin-bottom:8px" id="lu-emoji">🎉</div>
+      <div class="levelup-title" id="lu-event-title">EVENTO</div>
+      <div style="font-size:24px;font-weight:900;color:var(--gold);margin:8px 0" id="lu-event-body">¡HAS MEJORADO!</div>
+      <div style="font-size:13px;color:var(--gray);margin-bottom:20px" id="lu-event-detail"></div>
+      <button class="btn btn-primary" onclick="closeModal('modal-lu')">CONTINUAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Sheets Script -->
+<div class="modal-overlay" id="modal-script" onclick="closeModal('modal-script')">
+  <div class="modal-sheet" onclick="e=>e.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Apps Script Template <button class="modal-close" onclick="closeModal('modal-script')">✕</button></div>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:12px">Copia este código en tu Google Apps Script vinculado a un Google Sheet.</div>
+    <pre id="script-code" style="font-size:10px;font-family:var(--mono);background:rgba(0,0,0,0.5);padding:12px;border-radius:4px;overflow-x:auto;color:var(--gold);white-space:pre;max-height:300px;overflow-y:auto"></pre>
+    <button class="btn btn-primary btn-full" style="margin-top:12px" onclick="copyScript()">COPIAR SCRIPT</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// STATE & CONSTANTS
+// ═══════════════════════════════════════════════════════════
+const RANKS = ['E','D','C','B','A','S'];
+const RANK_XP = [0, 1000, 3000, 6000, 10000, 15000];
+const RANK_COLORS = { E:'var(--rank-e)', D:'var(--rank-d)', C:'var(--rank-c)', B:'var(--rank-b)', A:'var(--rank-a)', S:'var(--rank-s)' };
+const MISSION_TYPES = { salud:{label:'Salud · Físico', icon:'💪', class:'type-salud', color:'#2ECC71'}, mente:{label:'Mente · Conocimiento', icon:'🧠', class:'type-mente', color:'var(--chart-blue)'}, vida:{label:'Vida · Orden', icon:'🌿', class:'type-vida', color:'var(--chart-brown)'} };
+const TASK_XP_DAILY = 15;
+const TASK_XP_WEEKLY = 40;
+const HP_LOSS_DAILY = 5;
+const HP_LOSS_WEEKLY = 10;
+const HP_GAIN_DAILY = 3;
+
+// ═══════════════════════════════════════════════════════════
+// NEW STATS SYSTEM (6 atributos) + ponderación por tipo de misión
+// ═══════════════════════════════════════════════════════════
+const STAT_KEYS = ['vitalidad','fuerza','agilidad','resistencia','inteligencia','sabiduria'];
+const STAT_LABELS = {
+  vitalidad:'Vitalidad', fuerza:'Fuerza', agilidad:'Agilidad',
+  resistencia:'Resistencia', inteligencia:'Inteligencia', sabiduria:'Sabiduría'
+};
+
+// Cada misión contribuye a TODO, pero ponderado por su naturaleza (salud/mente/vida)
+const STAT_WEIGHTS = {
+  salud: { vitalidad:0.26, fuerza:0.22, agilidad:0.18, resistencia:0.22, inteligencia:0.06, sabiduria:0.06 },
+  mente: { vitalidad:0.08, fuerza:0.06, agilidad:0.08, resistencia:0.10, inteligencia:0.34, sabiduria:0.34 },
+  vida:  { vitalidad:0.18, fuerza:0.10, agilidad:0.14, resistencia:0.20, inteligencia:0.18, sabiduria:0.20 }
+};
+
+// Bonus leve por clase (manteniendo balance; no bloquea otras áreas)
+const CLASS_BONUS = {
+  guerrero: { fuerza:0.10, resistencia:0.06, vitalidad:0.06 },
+  sabio:    { inteligencia:0.10, sabiduria:0.10 },
+  monje:    { vitalidad:0.08, agilidad:0.08, sabiduria:0.06 }
+};
+
+// Multiplayer (Google Apps Script) — ya incluído
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbx3DxN85TdZrTnNY14pU0-vzgYMNvEeJNpznlo8GL7z8xdE4WY7r3vRsOSDC_ejWpiIug/exec";
+const LEADERBOARD_REFRESH_MS = 60000;
+
+
+let state = {
+  initialized: false,
+  character: { name:'Cazador', level:1, rank:'E', xp:0, hp:100, maxHp:100, stats:{vitalidad:0,fuerza:0,agilidad:0,resistencia:0,inteligencia:0,sabiduria:0}, avatar:null, class:'guerrero', createdAt:new Date().toISOString(), daysActive:0, maxStreak:0 , tasksCompleted:0, missionsCompleted:0 },
+  missions: [], // max 3
+  completions: {}, // { 'YYYY-MM-DD': { missionId: { taskId: bool } } }
+  chatHistory: [],
+  pendingMission: null,
+  settings: { aiPreference:'chatgpt', darkMode:true, notifications:false }, multiplayer:{ roomId:'', playerId:'', joinedAt:null }, sync:{ lastPush:0, lastPull:0 },
+  currentScreen: 'home',
+  setupClass: '',
+  charts: {},
+  syncInterval: null,
+  leaderboard: [],
+  groupId: null
+};
+
+const today = () => new Date().toISOString().split('T')[0];
+const uid = () => Math.random().toString(36).substr(2,9);
+const escapeHtml = (s) => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ═══════════════════════════════════════════════════════════
+// PERSISTENCE
+// ═══════════════════════════════════════════════════════════
+function saveState() {
+  try { localStorage.setItem('saga_state', JSON.stringify(state)); } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const s = localStorage.getItem('saga_state');
+    if (s) {
+      const parsed = JSON.parse(s);
+      Object.assign(state, parsed);
+
+      // Migration: stats 3 -> 6
+      if (state?.character?.stats) {
+        const st = state.character.stats;
+        if (st.salud !== undefined || st.mente !== undefined || st.vida !== undefined) {
+          // Aproximación: redistribuye lo viejo a lo nuevo
+          const salud = st.salud || 0, mente = st.mente || 0, vida = st.vida || 0;
+          state.character.stats = {
+            vitalidad: Math.round(salud*0.6 + vida*0.4),
+            fuerza: Math.round(salud*0.7),
+            agilidad: Math.round(salud*0.3 + vida*0.3),
+            resistencia: Math.round(salud*0.5 + vida*0.4),
+            inteligencia: Math.round(mente*0.7 + vida*0.2),
+            sabiduria: Math.round(mente*0.6 + vida*0.3)
+          };
+        } else {
+          // Asegura keys
+          STAT_KEYS.forEach(k => { if (state.character.stats[k] == null) state.character.stats[k] = 0; });
+        }
+      }
+
+      // Defaults nuevos
+      state.settings = state.settings || { aiPreference:'chatgpt', darkMode:true, notifications:false };
+      if (state.settings.apiKey !== undefined) delete state.settings.apiKey;
+      if (state.settings.apiProvider !== undefined) delete state.settings.apiProvider;
+      if (state.settings.sheetsUrl !== undefined) delete state.settings.sheetsUrl;
+
+      state.character.tasksCompleted = state.character.tasksCompleted || 0;
+      state.character.missionsCompleted = state.character.missionsCompleted || 0;
+
+      state.multiplayer = state.multiplayer || { roomId:'', playerId:'', joinedAt:null };
+      state.sync = state.sync || { lastPush:0, lastPull:0 };
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+// ═══════════════════════════════════════════════════════════
+// SETUP FLOW
+// ═══════════════════════════════════════════════════════════
+let setupStep = 1;
+
+function setupNext(step) {
+  if (step === 1) {
+    const name = document.getElementById('setup-name').value.trim();
+    if (!name) { showToast('Ingresa tu nombre, Cazador'); return; }
+    state.character.name = name;
+  } else if (step === 2) {
+    if (!state.setupClass) { showToast('Elige tu clase'); return; }
+    state.character.class = state.setupClass;
+  }
+  setupStep++;
+  document.querySelectorAll('.setup-step').forEach(s => s.classList.remove('active'));
+  document.getElementById('setup-' + setupStep)?.classList.add('active');
+  // Update progress dots
+  document.querySelectorAll('.setup-prog-dot').forEach((d, i) => { d.classList.toggle('done', i < setupStep); });
+}
+
+function selectClass(el) {
+  document.querySelectorAll('.setup-type-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  state.setupClass = el.dataset.class;
+}
+
+function setupFinish() {
+  // Modo gratuito: no API keys
+  state.initialized = true;
+  saveState();
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('app').style.display = '';
+  initApp();
+}
+
+// ═══════════════════════════════════════════════════════════
+// APP INIT
+// ═══════════════════════════════════════════════════════════
+function initApp() {
+  checkDailyReset();
+  renderAll();
+  initCharts();
+  setupNotifications();
+  startSync(); // multiplayer si hay ?room=
+  navigate(state.currentScreen || 'home');
+}
+
+function checkDailyReset() {
+  // Check if we need to process yesterday's failures
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+  const yd = yesterday.toISOString().split('T')[0];
+  const processedKey = 'processed_' + yd;
+  if (!state[processedKey] && state.missions.length > 0) {
+    state.missions.forEach(m => {
+      if (!m.active) return;
+      const phase = m.missions[m.currentMission - 1];
+      if (!phase) return;
+      const comp = state.completions[yd]?.[m.id] || {};
+      phase.dailyTasks.forEach(t => {
+        if (!comp[t.id]) { state.character.hp = Math.max(0, state.character.hp - HP_LOSS_DAILY); }
+      });
+    });
+    state[processedKey] = true;
+    saveState();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════
+function navigate(screen) {
+  state.currentScreen = screen;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + screen)?.classList.add('active');
+  document.getElementById('nav-' + screen)?.classList.add('active');
+  if (screen === 'stats') refreshCharts();
+  if (screen === 'arena') renderLeaderboard();
+  if (screen === 'profile') renderProfile();
+  if (screen === 'missions') renderChatScreen();
+  saveState();
+}
+
+function goToProfile() { navigate('profile'); }
+function goArena(){ navigate('arena'); }
+
+// ═══════════════════════════════════════════════════════════
+// RPG LOGIC
+// ═══════════════════════════════════════════════════════════
+function getRankFromXP(xp) {
+  let rank = 'E';
+  for (let i = RANKS.length - 1; i >= 0; i--) {
+    if (xp >= RANK_XP[i]) { rank = RANKS[i]; break; }
+  }
+  return rank;
+}
+
+function getLevelFromXP(xp) {
+  const rank = getRankFromXP(xp);
+  const rankIdx = RANKS.indexOf(rank);
+  const baseXP = RANK_XP[rankIdx];
+  const nextXP = RANK_XP[rankIdx + 1] || (RANK_XP[rankIdx] + 10000);
+  const progress = xp - baseXP;
+  const range = nextXP - baseXP;
+  return Math.max(1, Math.min(99, 1 + Math.floor((progress / range) * (rankIdx < RANKS.length - 1 ? 16 : 30))));
+}
+
+function getXPProgress(xp) {
+  const rank = getRankFromXP(xp);
+  const rankIdx = RANKS.indexOf(rank);
+  const baseXP = RANK_XP[rankIdx];
+  const nextXP = RANK_XP[rankIdx + 1] || (baseXP + 10000);
+  return { current: xp - baseXP, total: nextXP - baseXP, pct: Math.min(100, ((xp - baseXP) / (nextXP - baseXP)) * 100) };
+}
+
+function addXP(amount, missionType, taskKind) {
+  const prevRank = getRankFromXP(state.character.xp);
+  const prevLevel = getLevelFromXP(state.character.xp);
+  state.character.xp += amount;
+
+  // Puntos de stats: se reparten a los 6 atributos según el tipo de misión (salud/mente/vida)
+  if (missionType && STAT_WEIGHTS[missionType]) {
+    const basePts = Math.max(1, Math.round(amount / 3));
+    const weights = STAT_WEIGHTS[missionType];
+    const bonus = CLASS_BONUS[state.character.class] || {};
+    STAT_KEYS.forEach(k => {
+      const w = weights[k] || 0;
+      const b = bonus[k] || 0;
+      const pts = Math.max(0, Math.round(basePts * w * (1 + b)));
+      state.character.stats[k] = (state.character.stats[k] || 0) + pts;
+    });
+  }
+
+  const newRank = getRankFromXP(state.character.xp);
+  const newLevel = getLevelFromXP(state.character.xp);
+  state.character.rank = newRank;
+  state.character.level = newLevel;
+
+  if (newLevel > prevLevel || newRank !== prevRank) {
+    showRankUpEvent(prevRank, newRank, prevLevel, newLevel);
+  }
+
+  saveState();
+  renderHeader();
+  renderHomeStats();
+  // multiplayer hook
+  maybeSyncScore();
+}
+
+function showRankUpEvent(prevRank, newRank, prevLevel, newLevel) {
+  const isRankUp = newRank !== prevRank;
+  document.getElementById('lu-emoji').textContent = isRankUp ? '🏆' : '⬆️';
+  document.getElementById('lu-event-title').textContent = isRankUp ? '¡RANGO AUMENTADO!' : '¡NIVEL ALCANZADO!';
+  document.getElementById('lu-event-body').textContent = isRankUp ? `RANGO ${prevRank} → RANGO ${newRank}` : `NIVEL ${newLevel}`;
+  document.getElementById('lu-event-detail').textContent = isRankUp ? `¡Te has convertido en un Cazador de Rango ${newRank}!` : `Nivel ${newLevel} desbloqueado. ¡Sigue adelante!`;
+  openModal('modal-lu');
+}
+
+// ═══════════════════════════════════════════════════════════
+// MISSIONS
+// ═══════════════════════════════════════════════════════════
+function createMission(data) {
+  if (state.missions.filter(m => m.active).length >= 3) {
+    showToast('Máximo 3 misiones activas'); return false;
+  }
+  if (state.missions.find(m => m.active && m.type === data.type)) {
+    showToast(`Ya tienes una misión de ${MISSION_TYPES[data.type].label}`); return false;
+  }
+  const mission = {
+    id: uid(),
+    type: data.type,
+    sagaName: data.sagaName,
+    description: data.description || '',
+    startDate: today(),
+    active: true,
+    currentMission: 1,
+    missions: data.missions.map((m, i) => ({
+      number: i + 1,
+      name: m.name,
+      theme: m.theme || '',
+      dailyTasks: (m.dailyTasks || []).map(t => ({ id: uid(), label: t, type: 'daily' })),
+      weeklyTasks: (m.weeklyTasks || []).map(t => ({ id: uid(), label: t, type: 'weekly' }))
+    }))
+  };
+  state.missions.push(mission);
+  saveState();
+  renderMissionSlots();
+  showToast('✓ Misión activada: ' + data.sagaName);
+  return true;
+}
+
+function toggleTask(missionId, taskId, type) {
+  const d = today();
+  if (!state.completions[d]) state.completions[d] = {};
+  if (!state.completions[d][missionId]) state.completions[d][missionId] = {};
+  const wasCompleted = state.completions[d][missionId][taskId];
+  state.completions[d][missionId][taskId] = !wasCompleted;
+  const mission = state.missions.find(m => m.id === missionId);
+  if (!wasCompleted) {
+    const xp = type === 'weekly' ? TASK_XP_WEEKLY : TASK_XP_DAILY;
+    addXP(xp, mission?.type, type);
+    state.character.hp = Math.min(state.character.maxHp, state.character.hp + HP_GAIN_DAILY);
+    showToast(`+${xp} XP ⬆`);
+  } else {
+    state.character.xp = Math.max(0, state.character.xp - (type === 'weekly' ? TASK_XP_WEEKLY : TASK_XP_DAILY));
+    state.character.hp = Math.max(0, state.character.hp - HP_GAIN_DAILY);
+    state.character.rank = getRankFromXP(state.character.xp);
+    state.character.level = getLevelFromXP(state.character.xp);
+    state.character.tasksCompleted = Math.max(0, (state.character.tasksCompleted||0) - 1);
+  }
+  saveState();
+  renderMissionSlots();
+  renderHomeStats();
+}
+
+function isTaskComplete(missionId, taskId) {
+  return !!(state.completions[today()]?.[missionId]?.[taskId]);
+}
+
+function getMissionProgress(mission) {
+  const d = today();
+  const phase = mission.missions[mission.currentMission - 1];
+  if (!phase) return { done: 0, total: 0 };
+  const comp = state.completions[d]?.[mission.id] || {};
+  const allTasks = [...phase.dailyTasks, ...phase.weeklyTasks];
+  const done = allTasks.filter(t => comp[t.id]).length;
+  return { done, total: allTasks.length };
+}
+
+function getStreak() {
+  let streak = 0;
+  const d = new Date();
+  for (let i = 0; i < 365; i++) {
+    const key = d.toISOString().split('T')[0];
+    const dayData = state.completions[key];
+    if (!dayData || Object.keys(dayData).length === 0) { if (i > 0) break; }
+    else { streak++; }
+    d.setDate(d.getDate() - 1);
+  }
+  state.character.maxStreak = Math.max(state.character.maxStreak || 0, streak);
+  return streak;
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDER FUNCTIONS
+// ═══════════════════════════════════════════════════════════
+function renderAll() {
+  renderHeader();
+  renderHomeStats();
+  renderMissionSlots();
+  renderStreak();
+}
+
+function renderHeader() {
+  const { rank, level } = state.character;
+  const rankEl = document.getElementById('header-rank');
+  rankEl.textContent = rank;
+  rankEl.className = 'header-rank-badge rank-' + rank;
+  rankEl.style.color = RANK_COLORS[rank];
+  rankEl.style.borderColor = RANK_COLORS[rank];
+  document.getElementById('header-level-num').textContent = level;
+}
+
+function renderHomeStats() {
+  const c = state.character;
+  const prog = getXPProgress(c.xp);
+  document.getElementById('home-name').textContent = c.name.toUpperCase();
+  const rankEl = document.getElementById('home-rank');
+  rankEl.textContent = c.rank;
+  rankEl.className = 'rank-badge rank-' + c.rank;
+  document.getElementById('home-xp-label').textContent = `${c.xp} / ${c.xp - prog.current + prog.total} XP`;
+  document.getElementById('home-xp-bar').style.width = prog.pct + '%';
+  const hpPct = Math.max(0, Math.min(100, (c.hp / c.maxHp) * 100));
+  document.getElementById('home-hp-bar').style.width = hpPct + '%';
+  document.getElementById('home-hp-val').textContent = `${Math.round(c.hp)} / ${c.maxHp}`;
+  const hpFill = document.getElementById('home-hp-bar');
+  if (hpPct < 30) hpFill.style.background = 'linear-gradient(90deg,#8B0000,var(--hp-red))';
+  else if (hpPct < 60) hpFill.style.background = 'linear-gradient(90deg,var(--hp-yellow),#FFD700)';
+  else hpFill.style.background = 'linear-gradient(90deg,var(--hp-red),#FF6B6B)';
+  document.getElementById('stat-salud').textContent = c.stats.salud || 0;
+  document.getElementById('stat-mente').textContent = c.stats.mente || 0;
+  document.getElementById('stat-vida').textContent = c.stats.vida || 0;
+  // Avatar
+  const av = document.getElementById('home-avatar');
+  if (c.avatar) av.innerHTML = `<img src="${c.avatar}" alt="avatar">`;
+  else av.textContent = c.class === 'guerrero' ? '⚔️' : c.class === 'sabio' ? '📚' : '🧘';
+}
+
+function renderMissionSlots() {
+  const container = document.getElementById('mission-slots');
+  const types = ['salud','mente','vida'];
+  container.innerHTML = '';
+  types.forEach(type => {
+    const mission = state.missions.find(m => m.active && m.type === type);
+    if (!mission) {
+      const slot = document.createElement('div');
+      slot.className = 'mission-slot-empty';
+      slot.innerHTML = `<div style="font-size:24px">${MISSION_TYPES[type].icon}</div>
+        <div class="empty-label">Sin misión de ${MISSION_TYPES[type].label}</div>
+        <button class="btn btn-secondary" style="margin-top:10px;font-size:10px;padding:7px 16px" onclick="navigate('missions')">+ CREAR CON IA</button>`;
+      container.appendChild(slot);
+      return;
+    }
+    const prog = getMissionProgress(mission);
+    const phase = mission.missions[mission.currentMission - 1];
+    const d = today();
+    const comp = state.completions[d]?.[mission.id] || {};
+    const slot = document.createElement('div');
+    slot.className = 'mission-slot';
+    slot.innerHTML = `
+      <div class="mission-slot-header" onclick="openMissionModal('${mission.id}')">
+        <div class="mission-slot-icon">${MISSION_TYPES[type].icon}</div>
+        <div class="mission-slot-info">
+          <div class="mission-slot-name">${mission.sagaName}</div>
+          <div class="mission-slot-sub">${phase?.name || ''} · Día ${daysSince(mission.startDate)}/90</div>
+        </div>
+        <div style="text-align:right">
+          <div class="mission-slot-progress">${prog.done}/${prog.total}</div>
+          <div style="font-size:9px;color:var(--gray);opacity:0.5;margin-top:2px">${MISSION_TYPES[type].label}</div>
+        </div>
+      </div>
+      <div class="mission-tasks">
+        <div class="tasks-header">
+          <div style="font-size:10px;letter-spacing:1px;color:var(--gray);text-transform:uppercase">Tareas de Hoy</div>
+        </div>
+        ${(phase?.dailyTasks || []).map(t => `
+          <div class="task-item">
+            <div class="task-check ${comp[t.id] ? 'done' : ''}" onclick="toggleTask('${mission.id}','${t.id}','daily')"></div>
+            <div class="task-label ${comp[t.id] ? 'done' : ''}">${t.label}</div>
+            <div class="task-xp">+${TASK_XP_DAILY}XP</div>
+          </div>`).join('')}
+        ${(phase?.weeklyTasks || []).slice(0,1).map(t => `
+          <div class="task-item">
+            <div class="task-check ${comp[t.id] ? 'done' : ''}" onclick="toggleTask('${mission.id}','${t.id}','weekly')"></div>
+            <div class="task-label ${comp[t.id] ? 'done' : ''}" style="font-style:italic"><span style="font-size:9px;color:var(--chart-brown);margin-right:4px">SEMANAL</span>${t.label}</div>
+            <div class="task-xp" style="color:var(--chart-brown)">+${TASK_XP_WEEKLY}XP</div>
+          </div>`).join('')}
+      </div>`;
+    container.appendChild(slot);
+  });
+}
+
+function renderStreak() {
+  const bar = document.getElementById('streak-bar');
+  bar.innerHTML = '';
+  const days = ['D','L','M','X','J','V','S'];
+  const td = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(td); d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    const dayData = state.completions[key];
+    const isToday = i === 0;
+    const hasData = dayData && Object.values(dayData).some(m => Object.values(m).some(Boolean));
+    const el = document.createElement('div');
+    el.className = 'streak-day ' + (isToday ? 'today' : hasData ? 'completed' : '');
+    el.textContent = days[d.getDay()];
+    bar.appendChild(el);
+  }
+}
+
+function daysSince(dateStr) {
+  const start = new Date(dateStr);
+  const now = new Date();
+  return Math.max(1, Math.ceil((now - start) / (1000 * 60 * 60 * 24)));
+}
+
+// Mission Modal
+function openMissionModal(missionId) {
+  const mission = state.missions.find(m => m.id === missionId);
+  if (!mission) return;
+  document.getElementById('modal-mission-title').textContent = mission.sagaName;
+  const content = document.getElementById('modal-mission-content');
+  const d = today();
+  const comp = state.completions[d]?.[mission.id] || {};
+  const phase = mission.missions[mission.currentMission - 1];
+  content.innerHTML = `
+    <div style="margin-bottom:12px">
+      <span class="${MISSION_TYPES[mission.type].class} type-badge">${MISSION_TYPES[mission.type].icon} ${MISSION_TYPES[mission.type].label}</span>
+      <span style="font-size:11px;color:var(--gray);margin-left:8px">Fase ${mission.currentMission}/3</span>
+    </div>
+    <div style="font-size:12px;color:var(--gray);margin-bottom:16px;line-height:1.5">${mission.description || ''}</div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--chart-brown);text-transform:uppercase;margin-bottom:8px">${phase?.name || 'Fase Actual'}</div>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:12px">${phase?.theme || ''}</div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:8px">Tareas Diarias</div>
+    ${(phase?.dailyTasks || []).map(t => `
+      <div class="task-item">
+        <div class="task-check ${comp[t.id] ? 'done' : ''}" onclick="toggleTask('${mission.id}','${t.id}','daily');renderMissionModal('${mission.id}')"></div>
+        <div class="task-label ${comp[t.id] ? 'done' : ''}">${t.label}</div>
+        <div class="task-xp">+${TASK_XP_DAILY}XP</div>
+      </div>`).join('')}
+    <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:var(--chart-brown);text-transform:uppercase;margin:12px 0 8px">Retos Semanales</div>
+    ${(phase?.weeklyTasks || []).map(t => `
+      <div class="task-item">
+        <div class="task-check ${comp[t.id] ? 'done' : ''}" onclick="toggleTask('${mission.id}','${t.id}','weekly');renderMissionModal('${mission.id}')"></div>
+        <div class="task-label ${comp[t.id] ? 'done' : ''}">${t.label}</div>
+        <div class="task-xp" style="color:var(--chart-brown)">+${TASK_XP_WEEKLY}XP</div>
+      </div>`).join('')}
+    <div style="margin-top:20px;display:flex;gap:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="advanceMissionPhase('${mission.id}')">AVANZAR FASE ›</button>
+      <button class="btn btn-ghost" onclick="abandonMission('${mission.id}')">Abandonar</button>
+    </div>`;
+  openModal('modal-mission');
+}
+
+function renderMissionModal(missionId) {
+  openMissionModal(missionId);
+}
+
+function closeMissionModal(e) {
+  if (!e || e.target === document.getElementById('modal-mission')) closeModal('modal-mission');
+}
+
+function advanceMissionPhase(missionId) {
+  const m = state.missions.find(x => x.id === missionId);
+  if (!m) return;
+  if (m.currentMission < 3) {
+    m.currentMission++;
+    showToast(`✓ Avanzaste a ${m.missions[m.currentMission-1].name}`);
+  } else {
+    m.active = false;
+    showToast('🏆 ¡SAGA COMPLETADA! +500 XP');
+    state.character.missionsCompleted = (state.character.missionsCompleted||0) + 1;
+    addXP(500, m.type, 'bonus');
+  }
+  saveState(); closeModal('modal-mission'); renderMissionSlots();
+}
+
+function abandonMission(missionId) {
+  if (!confirm('¿Seguro que quieres abandonar esta misión?')) return;
+  state.missions = state.missions.filter(m => m.id !== missionId);
+  saveState(); closeModal('modal-mission'); renderMissionSlots();
+  showToast('Misión abandonada');
+}
+
+// ═══════════════════════════════════════════════════════════
+// AI CHAT
+// ═══════════════════════════════════════════════════════════
+function renderChatScreen() {
+  // Modo gratuito: siempre visible panel de prompt/JSON
+  document.getElementById('api-warning').style.display = 'flex';
+  document.getElementById('api-warning').style.flexDirection = 'column';
+  if (state.chatHistory.length === 0) {
+    addChatMsg('ai', '🆓 **Modo gratuito**
+
+1) Escríbeme el hábito que quieres construir.
+2) Yo te genero un **PROMPT** listo para copiar.
+3) Pégalo en ChatGPT/Claude/Gemini/Perplexity (gratis).
+4) Pega aquí el **JSON** y lo activo como misión.
+
+Tip: usa el botón **COPIAR PROMPT** para no equivocarte.');
+  }
+  if (state.pendingMission) showMissionPreview(state.pendingMission);
+}
+
+function addChatMsg(role, text) {
+  const container = document.getElementById('chat-messages');
+  const msg = { role, text, time: Date.now() };
+  state.chatHistory.push(msg);
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  const avatarHtml = role === 'ai'
+    ? '<div class="chat-avatar-sm">🤖</div>'
+    : `<div class="chat-avatar-sm">${state.character.avatar ? `<img src="${state.character.avatar}">` : '⚔️'}</div>`;
+  div.innerHTML = `${avatarHtml}<div class="chat-bubble ${role}">${text.replace(/\n/g,'<br>')}</div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  saveState();
+}
+
+function chatKeyDown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = ''; input.style.height = 'auto';
+  addChatMsg('user', text);
+  document.getElementById('chat-send-btn').disabled = true;
+
+  const container = document.getElementById('chat-messages');
+  const typing = document.createElement('div');
+  typing.className = 'chat-msg ai'; typing.id = 'typing-indicator';
+  typing.innerHTML = '<div class="chat-avatar-sm">🤖</div><div class="chat-bubble ai"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>';
+  container.appendChild(typing);
+  container.scrollTop = container.scrollHeight;
+
+  // Generación local de prompt (sin API)
+  const prompt = buildFreePrompt(text);
+  state.pendingPrompt = prompt;
+  // Pequeña pausa para UX
+  await new Promise(r => setTimeout(r, 350));
+  typing.remove();
+
+  addChatMsg('ai', `Listo. Copia y pega este PROMPT en tu IA (modo gratis).
+
+—
+${prompt}
+—
+
+Luego pega aquí el JSON con el botón **PEGAR JSON**.`);
+  document.getElementById('chat-send-btn').disabled = false;
+  saveState();
+}
+
+function buildFreePrompt(userHabitText) {
+  return `Eres un diseñador de misiones RPG para un habit tracker llamado "Saga de Hábitos" (estilo Solo Leveling).
+
+Tarea: A partir del texto del usuario, genera SOLO un JSON válido (sin markdown, sin explicaciones).
+
+REQUISITOS DEL JSON:
+- Debe incluir: sagaName, description, type (salud|mente|vida), missions (array de 3 fases).
+- Cada fase: number (1..3), name, theme, dailyTasks (5-7), weeklyTasks (1-2).
+- Cada task: id (string corto), title, detail (breve), type (daily|weekly), difficulty (E|D|C|B|A|S).
+- Mantén todo accionable, concreto, realista.
+- El usuario quiere que la misión contribuya a stats RPG: vitalidad/fuerza/agilidad/resistencia/inteligencia/sabiduria (la app pondera por type).
+
+REGLA CRÍTICA: Responde SOLO con JSON.
+
+TEXTO DEL USUARIO:
+"${userHabitText}"`;
+}
+
+// Botón superior de la pantalla Misiones
+function copyFreePrompt() {
+  const lastUser = [...state.chatHistory].reverse().find(m => m.role === 'user')?.text || '';
+  const prompt = state.pendingPrompt || buildFreePrompt(lastUser || 'Quiero construir un hábito útil y sostenible.');
+  navigator.clipboard.writeText(prompt).then(() => showToast('✓ Prompt copiado')).catch(()=>showToast('No pude copiar'));
+}
+
+function toggleImportBox() {
+  const box = document.getElementById('import-box');
+  box.style.display = (box.style.display === 'none' || !box.style.display) ? 'block' : 'none';
+  if (box.style.display === 'block') document.getElementById('import-json')?.focus();
+}
+
+function importMissionJson() {
+  const raw = (document.getElementById('import-json')?.value || '').trim();
+  if (!raw) return showToast('Pega el JSON primero');
+  try {
+    const mission = JSON.parse(raw);
+    validateMissionPayload(mission);
+    state.pendingMission = mission;
+    showMissionPreview(mission);
+    addChatMsg('ai', `✓ JSON recibido. Revisa la previsualización y actívala cuando estés listo.`);
+    document.getElementById('import-json').value = '';
+    document.getElementById('import-box').style.display = 'none';
+    saveState();
+  } catch (e) {
+    showToast('JSON inválido: ' + e.message);
+  }
+}
+
+function validateMissionPayload(m) {
+  if (!m || typeof m !== 'object') throw new Error('No es un objeto');
+  if (!m.sagaName || !m.description) throw new Error('Faltan sagaName/description');
+  if (!['salud','mente','vida'].includes(m.type)) throw new Error('type debe ser salud|mente|vida');
+  if (!Array.isArray(m.missions) || m.missions.length !== 3) throw new Error('missions debe tener 3 fases');
+  m.missions.forEach((ph, i) => {
+    if (!ph.name || !ph.theme) throw new Error('Fase incompleta #' + (i+1));
+    const d = ph.dailyTasks || [];
+    const w = ph.weeklyTasks || [];
+    if (!Array.isArray(d) || !Array.isArray(w)) throw new Error('dailyTasks/weeklyTasks inválidos');
+    if (d.length < 3) throw new Error('dailyTasks muy cortas');
+    [...d, ...w].forEach(t => {
+      if (!t.id || !t.title) throw new Error('Task sin id/title');
+      if (!['daily','weekly'].includes(t.type)) throw new Error('Task.type debe ser daily|weekly');
+    });
+  });
+}
+
+// OLD: kept only for compatibility (no se usa)
+async function callAI(userMsg) {
+  const systemPrompt = `Eres un diseñador de misiones RPG para un tracker de hábitos llamado "Saga de Hábitos".
+Cuando el usuario describa un hábito, genera una estructura completa en JSON.
+REGLAS:
+1. Responde SOLO con JSON válido, sin markdown ni texto extra.
+2. El JSON debe tener este formato exacto:
+{
+  "sagaName": "SAGA DE HÁBITO [NOMBRE CORTO] – 90 DÍAS",
+  "description": "Descripción narrativa épica de 1-2 oraciones",
+  "type": "salud|mente|vida",
+  "missions": [
+    {
+      "number": 1,
+      "name": "M1: FUNDACIÓN",
+      "theme": "Descripción del objetivo de la fase (1 oración)",
+      "dailyTasks": ["Tarea diaria 1 (específica)", "Tarea diaria 2", "Tarea diaria 3"],
+      "weeklyTasks": ["Reto semanal 1", "Reto semanal 2"]
+    },
+    {
+      "number": 2,
+      "name": "M2: CONSISTENCIA",
+      "theme": "...",
+      "dailyTasks": ["...", "...", "..."],
+      "weeklyTasks": ["...", "..."]
+    },
+    {
+      "number": 3,
+      "name": "M3: IDENTIDAD",
+      "theme": "...",
+      "dailyTasks": ["...", "...", "..."],
+      "weeklyTasks": ["...", "..."]
+    }
+  ]
+}
+3. type debe ser: "salud" para hábitos físicos/deportivos, "mente" para aprendizaje/mental, "vida" para organización/emocional.
+4. Las tareas deben ser concretas, medibles y progresivas entre fases.`;
+
+  const headers = { 'Content-Type': 'application/json' };
+  let body, url;
+  if (state.settings.apiProvider === 'claude') {
+    url = 'https://api.anthropic.com/v1/messages';
+    headers['x-api-key'] = state.settings.apiKey;
+    headers['anthropic-version'] = '2023-06-01';
+    body = JSON.stringify({ model: 'claude-3-5-haiku-20241022', max_tokens: 1200, system: systemPrompt, messages: [{ role: 'user', content: userMsg }] });
+  } else {
+    url = 'https://api.openai.com/v1/chat/completions';
+    headers['Authorization'] = 'Bearer ' + state.settings.apiKey;
+    body = JSON.stringify({ model: 'gpt-4o-mini', max_tokens: 1200, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }] });
+  }
+  const res = await fetch(url, { method: 'POST', headers, body });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  if (state.settings.apiProvider === 'claude') return data.content[0].text;
+  else return data.choices[0].message.content;
+}
+
+function processAIResponse(text, originalMsg) {
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON found');
+    const mission = JSON.parse(jsonMatch[0]);
+    if (!mission.sagaName || !mission.missions) throw new Error('Invalid structure');
+    state.pendingMission = mission;
+    addChatMsg('ai', `¡Misión generada! 🗡️\n\n**${mission.sagaName}**\n${mission.description}\n\nTipo: ${MISSION_TYPES[mission.type]?.label || mission.type}\n\nRevisar abajo y activar cuando estés listo.`);
+    showMissionPreview(mission);
+    saveState();
+  } catch (e) {
+    addChatMsg('ai', text);
+  }
+}
+
+function showMissionPreview(mission) {
+  const area = document.getElementById('mission-preview-area');
+  area.style.display = 'block';
+  area.innerHTML = `
+    <div class="mission-preview">
+      <div class="${MISSION_TYPES[mission.type]?.class || ''} type-badge" style="margin-bottom:8px">${MISSION_TYPES[mission.type]?.icon || ''} ${MISSION_TYPES[mission.type]?.label || mission.type}</div>
+      <div class="mission-preview-title">${mission.sagaName}</div>
+      <div class="mission-preview-desc">${mission.description || ''}</div>
+      ${(mission.missions || []).map(m => `
+        <div class="mission-phase">
+          <div class="mission-phase-name">${m.name}</div>
+          <div style="font-size:11px;color:var(--gray);opacity:0.7;margin-bottom:4px">${m.theme || ''}</div>
+          <ul class="mission-task-list">${(m.dailyTasks || []).map(t => `<li>${t}</li>`).join('')}</ul>
+        </div>`).join('')}
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-primary" style="flex:1" onclick="activatePendingMission()">⚔ ACTIVAR MISIÓN</button>
+        <button class="btn btn-secondary" onclick="dismissMissionPreview()">✕</button>
+      </div>
+    </div>`;
+}
+
+function activatePendingMission() {
+  if (!state.pendingMission) return;
+  const ok = createMission(state.pendingMission);
+  if (ok) {
+    state.pendingMission = null;
+    document.getElementById('mission-preview-area').style.display = 'none';
+    addChatMsg('ai', '✓ ¡Misión activada! Puedes verla en Inicio. ¡Buena suerte, Cazador!');
+  }
+}
+
+function dismissMissionPreview() {
+  state.pendingMission = null;
+  document.getElementById('mission-preview-area').style.display = 'none';
+  saveState();
+}
+
+function saveApiFromChat(){ showToast('Modo gratuito: no se necesita API Key'); }
+  state.settings.apiKey = key; state.settings.apiProvider = provider;
+  saveState();
+  document.getElementById('api-warning').style.display = 'none';
+  showToast('✓ API Key guardada');
+}
+
+// ═══════════════════════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════════════════════
+Chart.defaults.color = 'rgba(224,224,224,0.6)';
+Chart.defaults.borderColor = 'rgba(254,241,213,0.08)';
+Chart.defaults.font.family = "'Roboto Mono', monospace";
+Chart.defaults.font.size = 10;
+
+function initCharts() {
+  initRadarChart();
+  initXpChart();
+  initBarChart();
+}
+
+function initRadarChart() {
+  const ctx = document.getElementById('radar-chart')?.getContext('2d');
+  if (!ctx) return;
+  if (state.charts.radar) state.charts.radar.destroy();
+  const c = state.character;
+  const vals = STAT_KEYS.map(k => c.stats[k] || 0);
+
+  state.charts.radar = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: STAT_KEYS.map(k => STAT_LABELS[k]),
+      datasets: [{
+        data: vals,
+        borderColor: '#679CBC', backgroundColor: 'rgba(103,156,188,0.15)',
+        borderWidth: 2, pointBackgroundColor: '#679CBC', pointRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        r: {
+          grid: { color: 'rgba(254,241,213,0.1)' },
+          ticks: { display: false },
+          angleLines: { color: 'rgba(254,241,213,0.1)' },
+          pointLabels: { font: { size: 11, weight: '700' }, color: '#FEF1D5' }
+        }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+function initXpChart() {
+  // Histórico de racha (últimos 30 días): 1 = hubo al menos 1 tarea completada ese día, 0 = no
+  const ctx = document.getElementById('xp-chart')?.getContext('2d');
+  if (!ctx) return;
+  if (state.charts.xp) state.charts.xp.destroy();
+
+  const labels = [], data = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    labels.push(d.getDate() + '/' + (d.getMonth()+1));
+    const dayComp = state.completions[key] || {};
+    let any = false;
+    Object.values(dayComp).forEach(m => { Object.values(m).forEach(v => { if(v) any = true; }); });
+    data.push(any ? 1 : 0);
+  }
+
+  state.charts.xp = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        borderColor: '#C11720',
+        backgroundColor: 'rgba(193,23,32,0.12)',
+        borderWidth: 2, fill: true, tension: 0.35,
+        pointBackgroundColor: '#FEF1D5', pointRadius: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
+        y: { grid: { color: 'rgba(254,241,213,0.06)' }, beginAtZero: true, max: 1, ticks: { callback: v => v ? '✓' : '' } }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+function initBarChart() {
+  // Progreso por STAT (barras)
+  const ctx = document.getElementById('bar-chart')?.getContext('2d');
+  if (!ctx) return;
+  if (state.charts.bar) state.charts.bar.destroy();
+
+  const c = state.character;
+  const labels = STAT_KEYS.map(k => STAT_LABELS[k]);
+  const data = STAT_KEYS.map(k => c.stats[k] || 0);
+
+  state.charts.bar = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Puntos',
+        data,
+        backgroundColor: 'rgba(103,156,188,0.55)',
+        borderColor: '#679CBC',
+        borderWidth: 1, borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        y: { grid: { color: 'rgba(254,241,213,0.06)' }, beginAtZero: true },
+        x: { grid: { display: false } }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+function refreshCharts() {
+  const c = state.character;
+  const streak = getStreak();
+  document.getElementById('kpi-xp').textContent = c.xp;
+  document.getElementById('kpi-streak').textContent = streak;
+  let totalTasks = 0;
+  Object.values(state.completions).forEach(day => Object.values(day).forEach(m => Object.values(m).forEach(v => { if(v) totalTasks++; })));
+  document.getElementById('kpi-tasks').textContent = totalTasks;
+  // Progress list
+  const pl = document.getElementById('progress-list');
+  const areas = [
+    { key: 'vitalidad', label: 'Vitalidad', color: '#2ECC71', max: 600 },
+    { key: 'fuerza', label: 'Fuerza', color: '#C11720', max: 600 },
+    { key: 'agilidad', label: 'Agilidad', color: '#679CBC', max: 600 },
+    { key: 'resistencia', label: 'Resistencia', color: '#A38560', max: 600 },
+    { key: 'inteligencia', label: 'Inteligencia', color: 'rgba(103,156,188,0.95)', max: 600 },
+    { key: 'sabiduria', label: 'Sabiduría', color: 'rgba(254,241,213,0.9)', max: 600 }
+  ];
+  pl.innerHTML = areas.map(a => {
+    const val = c.stats[a.key] || 0;
+    const pct = Math.min(100, (val / a.max) * 100);
+    return `<div class="progress-item">
+      <div class="progress-row"><span class="progress-name">${a.label}</span><span class="progress-pct">${val} pts</span></div>
+      <div class="stat-bar"><div class="stat-bar-fill" style="width:${pct}%;background:${a.color}"></div></div>
+    </div>`;
+  }).join('');
+  initRadarChart(); initXpChart(); initBarChart();
+}
+
+// ═══════════════════════════════════════════════════════════
+// PROFILE
+// ═══════════════════════════════════════════════════════════
+function renderProfile() {
+  const c = state.character;
+  document.getElementById('profile-name').textContent = c.name.toUpperCase();
+  const pr = document.getElementById('profile-rank');
+  pr.textContent = c.rank; pr.className = 'rank-badge rank-' + c.rank;
+  document.getElementById('profile-level').textContent = 'Lv.' + c.level;
+  document.getElementById('p-xp').textContent = c.xp;
+  document.getElementById('p-streak').textContent = c.maxStreak || 0;
+  const days = Math.max(1, Math.ceil((Date.now() - new Date(c.createdAt)) / (1000*60*60*24)));
+  document.getElementById('p-days').textContent = days;
+  document.getElementById('name-display').textContent = c.name;
+  // Avatar
+  const wrap = document.getElementById('profile-avatar-wrap');
+  if (c.avatar) wrap.innerHTML = `<img src="${c.avatar}"><input type="file" id="avatar-input" accept="image/*" style="display:none" onchange="handleAvatarChange(event)">`;
+  else { wrap.innerHTML = (c.class === 'guerrero' ? '⚔️' : c.class === 'sabio' ? '📚' : '🧘') + '<input type="file" id="avatar-input" accept="image/*" style="display:none" onchange="handleAvatarChange(event)">'; }
+  // Multiplayer room label
+  const roomId = roomFromUrl();
+  const lbl = document.getElementById('current-room-label');
+  if (lbl) lbl.textContent = roomId ? roomId : '—';
+
+  document.getElementById('notif-toggle').className = 'toggle' + (state.settings.notifications ? ' on' : '');
+}
+
+function changeAvatar() { document.getElementById('avatar-input')?.click(); }
+
+function handleAvatarChange(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    state.character.avatar = ev.target.result;
+    saveState(); renderProfile(); renderHomeStats();
+    showToast('✓ Avatar actualizado');
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveApiConfig(){ showToast('Modo gratuito: no hay API keys'); }
+
+function saveSheetsConfig(){ showToast('No se requiere configurar Sheets'); }
+
+function toggleNotifications() {
+  if (!state.settings.notifications) {
+    if ('Notification' in window) {
+      Notification.requestPermission().then(perm => {
+        state.settings.notifications = perm === 'granted';
+        document.getElementById('notif-toggle').className = 'toggle' + (state.settings.notifications ? ' on' : '');
+        if (perm === 'granted') { scheduleNotifications(); showToast('✓ Notificaciones activadas'); }
+        else showToast('Permisos de notificación denegados');
+        saveState();
+      });
+    } else showToast('Notificaciones no disponibles');
+  } else {
+    state.settings.notifications = false;
+    document.getElementById('notif-toggle').className = 'toggle';
+    saveState(); showToast('Notificaciones desactivadas');
+  }
+}
+
+function toggleDark() {
+  state.settings.darkMode = !state.settings.darkMode;
+  document.getElementById('dark-toggle').className = 'toggle' + (state.settings.darkMode ? ' on' : '');
+  saveState();
+}
+
+function editName() {
+  const n = prompt('Nuevo nombre:', state.character.name);
+  if (n && n.trim()) {
+    state.character.name = n.trim().substr(0,20);
+    saveState(); renderProfile(); renderHomeStats();
+    showToast('✓ Nombre actualizado');
+  }
+}
+
+function resetData() {
+  if (!confirm('⚠️ ¿Seguro? Esto borrará TODO tu progreso.')) return;
+  if (!confirm('Esta acción es IRREVERSIBLE. ¿Continuar?')) return;
+  localStorage.removeItem('saga_state');
+  location.reload();
+}
+
+// ═══════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════
+function setupNotifications() {
+  if (state.settings.notifications && 'Notification' in window && Notification.permission === 'granted') {
+    scheduleNotifications();
+  }
+}
+
+function scheduleNotifications() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  // Morning reminder at 8am
+  const now = new Date();
+  const morning = new Date(); morning.setHours(8,0,0,0);
+  if (now > morning) morning.setDate(morning.getDate() + 1);
+  const msToMorning = morning - now;
+  setTimeout(() => {
+    new Notification('⚔️ Saga de Hábitos', {
+      body: '¡Buenos días, Cazador! Tus misiones diarias te esperan.',
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23C11720"/><text y=".9em" font-size="80">⚔️</text></svg>'
+    });
+    scheduleNotifications();
+  }, msToMorning);
+  // Evening reminder at 7pm
+  const evening = new Date(); evening.setHours(19,0,0,0);
+  if (now > evening) evening.setDate(evening.getDate() + 1);
+  const msToEvening = evening - now;
+  setTimeout(() => {
+    const incomplete = state.missions.filter(m => m.active).some(m => {
+      const prog = getMissionProgress(m);
+      return prog.done < prog.total;
+    });
+    if (incomplete) {
+      new Notification('⚔️ Misiones Pendientes', {
+        body: '¡Cazador! Aún tienes tareas sin completar. ¡No pierdas HP!'
+      });
+    }
+  }, msToEvening);
+}
+
+// ═══════════════════════════════════════════════════════════
+// ARENA / MULTIPLAYER
+// ═══════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════
+// ARENA · MULTIPLAYER (GAS)
+// - Crear sala y generar link ?room=
+// - Join anónimo automático si abres el link
+// - Refresh leaderboard cada 60s
+// - Ranking: racha > tareas > misiones > XP
+// ═══════════════════════════════════════════════════════════
+const MP_KEY = "saga_mp_v2";
+let mpTimer = null;
+let lastSyncAt = 0;
+
+async function apiPost(action, data){
+  if(!GAS_API_URL) throw new Error("GAS_API_URL no configurado.");
+  const url = `${GAS_API_URL}?action=${encodeURIComponent(action)}`;
+  const res = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(data||{}) });
+  return res.json();
+}
+async function apiGet(action, params){
+  if(!GAS_API_URL) throw new Error("GAS_API_URL no configurado.");
+  const qs = new URLSearchParams({ action, ...(params||{}) }).toString();
+  const res = await fetch(`${GAS_API_URL}?${qs}`);
+  return res.json();
+}
+function loadMP(){ try{ return JSON.parse(localStorage.getItem(MP_KEY)||"{}"); }catch(_){ return {}; } }
+function saveMP(v){ localStorage.setItem(MP_KEY, JSON.stringify(v||{})); }
+
+function roomFromUrl(){
+  const u = new URL(window.location.href);
+  return (u.searchParams.get('room') || '').trim();
+}
+
+async function generateInvite() {
+  try{
+    document.getElementById('sync-dot')?.classList.remove('idle');
+    document.getElementById('sync-dot')?.classList.add('syncing');
+    document.getElementById('sync-status').textContent = 'Creando sala...';
+
+    const r = await apiPost('createRoom', { name:'' });
+    if(r.error) throw new Error(r.error);
+
+    const baseUrl = window.location.origin + window.location.pathname;
+    const inviteUrl = `${baseUrl}?room=${encodeURIComponent(r.roomId)}`;
+
+    document.getElementById('invite-link').textContent = inviteUrl;
+    await navigator.clipboard.writeText(inviteUrl);
+    showToast('✓ Link copiado');
+
+    // Entra a la sala inmediatamente
+    window.location.href = inviteUrl;
+  } catch(e){
+    showToast('No pude crear sala: ' + e.message);
+    document.getElementById('sync-dot')?.classList.add('idle');
+    document.getElementById('sync-status').textContent = 'Sin sincronización';
+  }
+}
+
+function copyInvite() {
+  const link = document.getElementById('invite-link').textContent;
+  if (link.startsWith('http')) {
+    navigator.clipboard.writeText(link).then(() => showToast('✓ Link copiado'));
+  } else showToast('Genera un link primero');
+}
+
+// Join automático si viene ?room=
+async function ensureJoined(roomId){
+  const mp = loadMP();
+  if(mp.roomId === roomId && mp.playerId && mp.token) return mp;
+
+  // Anónimo por default (nombre opcional)
+  const displayName = (state.character.name || '').trim() || '';
+  const r = await apiPost('joinRoom', { roomId, displayName });
+  if(r.error) throw new Error(r.error);
+
+  const next = { roomId:r.roomId, playerId:r.playerId, token:r.token, displayName:r.displayName || displayName };
+  saveMP(next);
+  state.multiplayer.roomId = next.roomId;
+  state.multiplayer.playerId = next.playerId;
+  state.multiplayer.joinedAt = Date.now();
+  saveState();
+  return next;
+}
+
+async function refreshLeaderboard(){
+  const roomId = roomFromUrl();
+  if(!roomId) return;
+  try{
+    const r = await apiGet('getLeaderboard', { roomId });
+    if(r.error) throw new Error(r.error);
+    const list = (r.leaderboard || []).slice();
+
+    // Ranking: racha > tareas > misiones > XP
+    list.sort((a,b)=>
+      (b.streakDays||0)-(a.streakDays||0) ||
+      (b.tasksCompleted||0)-(a.tasksCompleted||0) ||
+      (b.missionsCompleted||0)-(a.missionsCompleted||0) ||
+      (b.xp||0)-(a.xp||0)
+    );
+
+    state.leaderboard = list;
+    renderLeaderboard();
+
+    document.getElementById('sync-dot')?.classList.remove('idle');
+    document.getElementById('sync-dot')?.classList.remove('syncing');
+    document.getElementById('sync-dot')?.classList.add('ok');
+    document.getElementById('sync-status').textContent = 'Sincronizado';
+    state.sync.lastPull = Date.now();
+    saveState();
+  }catch(e){
+    document.getElementById('sync-dot')?.classList.remove('ok');
+    document.getElementById('sync-dot')?.classList.add('idle');
+    document.getElementById('sync-status').textContent = 'Sin sincronización';
+  }
+}
+
+function startMultiplayer(){
+  const roomId = roomFromUrl();
+  if(!roomId) {
+    // Si no hay sala, limpia UI
+    document.getElementById('invite-link').textContent = 'Genera un link de invitación...';
+    return;
+  }
+  const baseUrl = window.location.origin + window.location.pathname;
+  document.getElementById('invite-link').textContent = `${baseUrl}?room=${encodeURIComponent(roomId)}`;
+
+  // Join + loop refresh
+  ensureJoined(roomId)
+    .then(()=>{ refreshLeaderboard(); maybeSyncScore(true); })
+    .catch(()=>{});
+
+  if(mpTimer) clearInterval(mpTimer);
+  mpTimer = setInterval(()=>{ refreshLeaderboard(); }, LEADERBOARD_REFRESH_MS);
+}
+
+// Hook central: empujar score (throttle)
+async function maybeSyncScore(force=false){
+  const roomId = roomFromUrl();
+  if(!roomId) return;
+
+  const mp = loadMP();
+  if(!mp.roomId || !mp.playerId || !mp.token) return;
+
+  const now = Date.now();
+  if(!force && now - lastSyncAt < 3500) return;
+  lastSyncAt = now;
+
+  try{
+    const payload = {
+      roomId: mp.roomId,
+      playerId: mp.playerId,
+      token: mp.token,
+      streakDays: getStreak(),
+      tasksCompleted: state.character.tasksCompleted || 0,
+      missionsCompleted: state.character.missionsCompleted || 0,
+      xp: state.character.xp || 0,
+      stats: state.character.stats || {}
+    };
+    await apiPost('updateScore', payload);
+    state.sync.lastPush = Date.now();
+    saveState();
+  } catch(e){}
+}
+
+// Join manual (si alguien pega un id) — opcional
+function joinGroup(){
+  const code = document.getElementById('join-code')?.value?.trim();
+  if(!code) return showToast('Ingresa un ID de sala');
+  const baseUrl = window.location.origin + window.location.pathname;
+  window.location.href = `${baseUrl}?room=${encodeURIComponent(code)}`;
+}
+function startSync(){ startMultiplayer(); }
+
+function renderLeaderboard() {
+  const container = document.getElementById('leaderboard');
+  const myData = { name: state.character.name, rank: state.character.rank, level: state.character.level, xp: state.character.xp, isMe: true, avatar: state.character.avatar };
+  const all = [myData, ...state.leaderboard.filter(p => p.name !== state.character.name)];
+  all.sort((a,b) => b.xp - a.xp);
+  const posClass = ['gold','silver','bronze'];
+  container.innerHTML = all.map((p, i) => `
+    <div class="lb-row ${p.isMe ? 'me' : ''}">
+      <div class="lb-pos ${posClass[i] || ''}">${i+1}</div>
+      <div class="lb-avatar">${p.avatar ? `<img src="${p.avatar.substr(0,200)}" style="width:100%;height:100%;object-fit:cover">` : '⚔️'}</div>
+      <div class="lb-info">
+        <div class="lb-name">${p.name}${p.isMe ? ' (Tú)' : ''}</div>
+        <div class="lb-sub"><span class="rank-badge rank-${p.rank}" style="font-size:10px;width:20px;height:20px">${p.rank}</span> Lv.${p.level}</div>
+      </div>
+      <div class="lb-xp">${p.xp} XP</div>
+    </div>`).join('');
+}
+
+function joinGroup() {
+  const code = document.getElementById('join-code').value.trim();
+  if (!code) { showToast('Ingresa un ID de grupo'); return; }
+  state.groupId = code;
+  saveState();
+  fetchLeaderboard();
+  showToast('✓ Unido al grupo');
+}
+
+// ═══════════════════════════════════════════════════════════
+// UTILITY
+// ═══════════════════════════════════════════════════════════
+function showToast(msg, duration = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function openModal(id) { document.getElementById(id)?.classList.add('open'); }
+function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
+
+// ═══════════════════════════════════════════════════════════
+// APPS SCRIPT TEMPLATE
+// ═══════════════════════════════════════════════════════════
+const APPS_SCRIPT_TEMPLATE = `// SAGA DE HÁBITOS - Google Apps Script Backend
+// 1. Crea un nuevo Google Sheet
+// 2. Ve a Extensiones > Apps Script
+// 3. Pega este código y guarda
+// 4. Haz clic en Implementar > Nueva implementación > Aplicación web
+// 5. Ejecutar como: Yo, Acceso: Cualquier persona
+// 6. Copia la URL y pégala en Saga de Hábitos > Perfil > Google Sheets
+
+const SHEET_NAME = 'Players';
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    if (data.action === 'update') {
+      updatePlayer(data.groupId, data.player);
+    }
+    return ContentService.createTextOutput(JSON.stringify({ok:true}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({error:err.message}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  try {
+    const action = e.parameter.action;
+    const groupId = e.parameter.groupId || 'default';
+    if (action === 'get') {
+      const players = getPlayers(groupId);
+      return ContentService.createTextOutput(JSON.stringify({players}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({error:err.message}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function getSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+    sheet.getRange(1,1,1,9).setValues([['groupId','name','rank','level','xp','hp','stats','streak','updatedAt']]);
+  }
+  return sheet;
+}
+
+function updatePlayer(groupId, player) {
+  const sheet = getSheet();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === groupId && data[i][1] === player.name) {
+      sheet.getRange(i+1,1,1,9).setValues([[
+        groupId, player.name, player.rank, player.level,
+        player.xp, player.hp, JSON.stringify(player.stats),
+        player.streak, player.updatedAt
+      ]]);
+      return;
+    }
+  }
+  sheet.appendRow([groupId, player.name, player.rank, player.level,
+    player.xp, player.hp, JSON.stringify(player.stats),
+    player.streak, player.updatedAt]);
+}
+
+function getPlayers(groupId) {
+  const sheet = getSheet();
+  const data = sheet.getDataRange().getValues();
+  const players = [];
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === groupId) {
+      players.push({
+        name: data[i][1], rank: data[i][2], level: data[i][3],
+        xp: data[i][4], hp: data[i][5],
+        stats: JSON.parse(data[i][6] || '{}'),
+        streak: data[i][7], updatedAt: data[i][8]
+      });
+    }
+  }
+  return players.sort((a,b) => b.xp - a.xp);
+}`;
+
+function showSheetsScript() {
+  document.getElementById('script-code').textContent = APPS_SCRIPT_TEMPLATE;
+  openModal('modal-script');
+}
+
+function copyScript() {
+  navigator.clipboard.writeText(APPS_SCRIPT_TEMPLATE).then(() => showToast('✓ Script copiado'));
+}
+
+function closeLevelUp() { document.getElementById('levelup-modal').classList.remove('show'); }
+
+// ═══════════════════════════════════════════════════════════
+// URL PARAMS (join from invite link)
+// ═══════════════════════════════════════════════════════════
+function checkUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('group')) {
+    state.groupId = params.get('group');
+    saveState();
+    setTimeout(() => { navigate('arena'); fetchLeaderboard(); showToast('¡Unido al grupo desde invitación!'); }, 1000);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// PWA SERVICE WORKER (inline via blob)
+// ═══════════════════════════════════════════════════════════
+function registerSW() {
+  if ('serviceWorker' in navigator) {
+    const swCode = `
+const CACHE='saga-v1';
+const ASSETS=[self.location.href];
+self.addEventListener('install',e=>{ e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))); });
+self.addEventListener('fetch',e=>{ e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match(e.request)))); });
+    `;
+    const blob = new Blob([swCode], { type: 'application/javascript' });
+    navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// DEMO MISSION (if no missions exist)
+// ═══════════════════════════════════════════════════════════
+function addDemoMission() {
+  if (state.missions.length > 0) return;
+  createMission({
+    sagaName: 'SAGA DE HÁBITO MOVIMIENTO – 90 DÍAS',
+    description: 'Transforma tu cuerpo y mente a través del movimiento diario constante.',
+    type: 'salud',
+    missions: [
+      { number:1, name:'M1: FUNDACIÓN', theme:'Construir la base del movimiento diario',
+        dailyTasks:['Caminar 20 min al aire libre','10 sentadillas + 10 flexiones al despertar','Estiramientos nocturnos 5 min'],
+        weeklyTasks:['Rutina completa de 30 min (Lunes)','Desafío: correr 2km sin parar'] },
+      { number:2, name:'M2: CONSISTENCIA', theme:'Elevar la intensidad y mantener el ritmo',
+        dailyTasks:['Cardio 30 min (correr, bicicleta o saltar)','20 sentadillas + 15 flexiones + 1 min plancha','Hidratación: 2L de agua'],
+        weeklyTasks:['Entrenamiento HIIT 20 min','Medir tiempo en 1km y superar récord'] },
+      { number:3, name:'M3: IDENTIDAD', theme:'Convertir el ejercicio en parte de tu identidad',
+        dailyTasks:['Entrenamiento estructurado 45 min','Registro en diario: peso/medidas/sensaciones','Preparar ropa de deporte la noche anterior'],
+        weeklyTasks:['Competir en un reto: 5km o 100 flexiones','Enseñar un ejercicio a alguien más'] }
+    ]
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  registerSW();
+  const loaded = loadState();
+  if (loaded && state.initialized) {
+    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('app').style.display = '';
+    initApp();
+    setTimeout(addDemoMission, 500);
+    checkUrlParams();
+  }
+  // Auto-expand textarea
+  document.getElementById('chat-input')?.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+  });
+});
+</script>
+
+<!-- PWA Manifest inline -->
+<script>
+(function(){
+  const manifest = {
+    name: 'Saga de Hábitos',
+    short_name: 'Saga RPG',
+    description: 'RPG Habit Tracker – Solo Leveling Style',
+    start_url: '.',
+    display: 'standalone',
+    orientation: 'portrait',
+    background_color: '#03110D',
+    theme_color: '#03110D',
+    icons: [{ src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="%23C11720"/><text y="400" font-size="400" text-anchor="middle" x="256">⚔️</text></svg>', sizes: '512x512', type: 'image/svg+xml' }]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+  const link = document.createElement('link');
+  link.rel = 'manifest'; link.href = URL.createObjectURL(blob);
+  document.head.appendChild(link);
+})();
+</script>
+
+</body>
+</html>
