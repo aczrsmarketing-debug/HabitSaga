@@ -1,0 +1,1129 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>SAGA DE HÁBITOS — RPG</title>
+
+  <!-- Chart.js (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel:#0f1b33;
+      --panel2:#0c162b;
+      --text:#e8eefc;
+      --muted:#9db0d6;
+      --line:#243556;
+      --good:#25d366;
+      --warn:#ffb020;
+      --bad:#ff4d4f;
+      --accent:#7aa2ff;
+      --accent2:#8b5cf6;
+      --shadow: 0 12px 28px rgba(0,0,0,.35);
+      --r:18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background: radial-gradient(1200px 700px at 10% 10%, rgba(122,162,255,.22), transparent 55%),
+                  radial-gradient(1000px 600px at 90% 10%, rgba(139,92,246,.18), transparent 60%),
+                  linear-gradient(180deg, #060a14 0%, #0b1220 50%, #070b14 100%);
+      color:var(--text);
+    }
+    a{color:inherit}
+    .app{min-height:100%; width:100%; display:flex; flex-direction:column;}
+    header{
+      position:sticky; top:0; z-index:10;
+      backdrop-filter: blur(10px);
+      background: rgba(6,10,20,.72);
+      border-bottom:1px solid rgba(36,53,86,.6);
+    }
+    .topbar{
+      display:flex; gap:12px; align-items:center; justify-content:space-between;
+      padding:12px clamp(12px, 3vw, 22px);
+      max-width:1200px; margin:0 auto;
+    }
+    .brand{display:flex; gap:10px; align-items:center; min-width:0;}
+    .logo{
+      width:36px; height:36px; border-radius:12px;
+      background: linear-gradient(135deg, rgba(122,162,255,.95), rgba(139,92,246,.95));
+      box-shadow: var(--shadow);
+      display:grid; place-items:center;
+      font-weight:800;
+    }
+    .titlewrap{min-width:0}
+    .title{font-size:14px; font-weight:800; letter-spacing:.4px; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .subtitle{font-size:12px; color:var(--muted); margin:2px 0 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;}
+    button{
+      appearance:none; border:1px solid rgba(36,53,86,.8);
+      background: rgba(15,27,51,.9);
+      color:var(--text);
+      border-radius:14px;
+      padding:10px 12px;
+      cursor:pointer;
+      box-shadow: 0 10px 22px rgba(0,0,0,.22);
+      transition: transform .06s ease, border-color .15s ease, background .15s ease;
+      font-weight:700;
+      font-size:13px;
+    }
+    button:hover{border-color: rgba(122,162,255,.55)}
+    button:active{transform: translateY(1px)}
+    .btn-accent{
+      background: linear-gradient(135deg, rgba(122,162,255,.95), rgba(139,92,246,.95));
+      border-color: rgba(255,255,255,.12);
+    }
+    .btn-ghost{background: transparent; box-shadow:none;}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px; border:1px solid rgba(36,53,86,.8); border-radius:999px;
+      background: rgba(12,22,43,.65);
+      color: var(--muted);
+      font-size:12px; font-weight:700;
+    }
+    .pill strong{color:var(--text)}
+    main{
+      flex:1;
+      width:100%;
+      padding: 16px clamp(12px, 3vw, 22px) 26px;
+      max-width:1200px; margin:0 auto;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap:14px;
+      align-items:start;
+    }
+    @media (max-width: 980px){ .grid{grid-template-columns: 1fr} }
+    .card{
+      background: rgba(15,27,51,.78);
+      border:1px solid rgba(36,53,86,.7);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding:14px 14px 10px;
+      border-bottom:1px solid rgba(36,53,86,.55);
+      display:flex; justify-content:space-between; align-items:flex-end; gap:10px;
+    }
+    .hd h2{margin:0; font-size:14px; letter-spacing:.3px;}
+    .hd .meta{font-size:12px; color:var(--muted); font-weight:700;}
+    .card .bd{padding:14px}
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .sep{height:1px; background:rgba(36,53,86,.55); margin:12px 0}
+    .missions{display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:10px;}
+    @media (max-width: 980px){ .missions{grid-template-columns: 1fr} }
+    .mission{
+      background: rgba(12,22,43,.65);
+      border:1px solid rgba(36,53,86,.55);
+      border-radius: 18px;
+      padding:12px;
+      min-width:0;
+    }
+    .mission .tag{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;}
+    .tag .type{
+      font-size:12px; font-weight:900; letter-spacing:.4px;
+      color:#d7e3ff;
+      display:flex; gap:8px; align-items:center;
+    }
+    .dot{width:9px;height:9px;border-radius:50%}
+    .dot.health{background:#25d366}
+    .dot.mind{background:#7aa2ff}
+    .dot.life{background:#ffb020}
+    .mission h3{margin:0; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .mission .small{color:var(--muted); font-size:12px; font-weight:700; margin-top:4px}
+    .tasks{margin-top:10px; display:grid; gap:8px;}
+    .task{
+      display:flex; gap:10px; align-items:flex-start;
+      background: rgba(15,27,51,.65);
+      border:1px solid rgba(36,53,86,.55);
+      border-radius:14px;
+      padding:10px;
+    }
+    .task input{margin-top:2px}
+    .task .t{flex:1; min-width:0;}
+    .task .t .name{font-weight:800; font-size:13px; overflow:hidden; text-overflow:ellipsis;}
+    .task .t .desc{font-size:12px; color:var(--muted); margin-top:2px;}
+    .task .badge{
+      font-size:11px; font-weight:900;
+      padding:6px 8px; border-radius:999px;
+      border:1px solid rgba(36,53,86,.55);
+      background: rgba(12,22,43,.55);
+      color: #d7e3ff;
+      white-space:nowrap;
+    }
+    .task .badge.lock{color:#ffd38a;border-color:rgba(255,176,32,.35)}
+    .task .badge.done{color:#b7ffcc;border-color:rgba(37,211,102,.35)}
+    .notice{
+      border-radius:16px;
+      border:1px solid rgba(36,53,86,.6);
+      background: rgba(12,22,43,.55);
+      padding:12px;
+      color: var(--muted);
+      font-weight:700;
+      font-size:12px;
+      line-height:1.4;
+    }
+    textarea, input[type="text"]{
+      width:100%;
+      border-radius:14px;
+      border:1px solid rgba(36,53,86,.75);
+      background: rgba(12,22,43,.65);
+      color: var(--text);
+      padding:10px 12px;
+      font-family: var(--sans);
+      font-size:13px;
+      outline:none;
+    }
+    textarea{min-height:140px; resize:vertical; font-family: var(--mono); font-size:12px}
+    .two{display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
+    @media (max-width: 800px){ .two{grid-template-columns: 1fr} }
+    .classes{display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:10px;}
+    @media (max-width: 800px){ .classes{grid-template-columns: 1fr} }
+    .classCard{
+      padding:12px;
+      background: rgba(12,22,43,.65);
+      border:1px solid rgba(36,53,86,.55);
+      border-radius:18px;
+      cursor:pointer;
+      transition: transform .06s ease, border-color .15s ease;
+    }
+    .classCard:hover{border-color: rgba(122,162,255,.55)}
+    .classCard:active{transform: translateY(1px)}
+    .classCard.selected{border-color: rgba(122,162,255,.8); box-shadow: 0 0 0 3px rgba(122,162,255,.15) inset}
+    .classCard .cTop{display:flex; gap:10px; align-items:center}
+    .classIcon{
+      width:36px;height:36px;border-radius:14px;
+      display:grid;place-items:center;
+      background: rgba(15,27,51,.75);
+      border:1px solid rgba(36,53,86,.55);
+      font-size:18px;
+    }
+    .classCard h4{margin:0;font-size:13px;font-weight:900}
+    .classCard p{margin:6px 0 0;font-size:12px;color:var(--muted);font-weight:700;line-height:1.35}
+    .chartWrap{
+      background: rgba(12,22,43,.55);
+      border:1px solid rgba(36,53,86,.55);
+      border-radius:18px;
+      padding:12px;
+    }
+    canvas{width:100% !important; height:280px !important;}
+    @media (max-width: 980px){ canvas{height:260px !important;} }
+    .leader{display:grid; gap:8px;}
+    .leaderItem{
+      display:flex; justify-content:space-between; gap:10px; align-items:center;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(36,53,86,.55);
+      background: rgba(12,22,43,.55);
+    }
+    .leaderItem .left{min-width:0}
+    .leaderItem .name{font-weight:900; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    .leaderItem .sub{font-size:12px; color:var(--muted); font-weight:700; margin-top:2px}
+    .leaderItem .rank{font-family:var(--mono); font-size:12px; color:#d7e3ff; font-weight:900; white-space:nowrap;}
+    .toast{
+      position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+      background: rgba(0,0,0,.75);
+      color:#fff;
+      border:1px solid rgba(255,255,255,.12);
+      padding:10px 12px;
+      border-radius:14px;
+      box-shadow: var(--shadow);
+      font-weight:800;
+      font-size:13px;
+      z-index:1000;
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .15s ease, transform .15s ease;
+      max-width:min(640px, calc(100% - 24px));
+      text-align:center;
+    }
+    .toast.show{opacity:1; transform:translateX(-50%) translateY(-2px)}
+    .muted{color:var(--muted)}
+    .mono{font-family:var(--mono)}
+    .mini{font-size:12px}
+  </style>
+
+  <link rel="manifest" href="data:application/manifest+json,{&quot;name&quot;:&quot;SAGA DE HÁBITOS — RPG&quot;,&quot;short_name&quot;:&quot;SAGA&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;#0b1220&quot;,&quot;theme_color&quot;:&quot;#0b1220&quot;,&quot;icons&quot;:[]}" />
+</head>
+
+<body>
+<div class="app">
+  <header>
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">S</div>
+        <div class="titlewrap">
+          <p class="title">SAGA DE HÁBITOS — RPG</p>
+          <p class="subtitle" id="subtitle">Single‑player • Sin API keys • Stats 6 • Multijugador por sala</p>
+        </div>
+      </div>
+      <div class="actions">
+        <span class="pill" title="Hoy">🗓️ <strong id="todayLabel">—</strong></span>
+        <button class="btn-ghost" id="btnReset">Reset</button>
+        <button id="btnInvite">Invitar</button>
+        <button id="btnCreateRoom">Crear sala</button>
+        <button id="btnCopyPrompt">Prompt IA</button>
+        <button id="btnSave" class="btn-accent">Guardar</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="grid">
+      <section class="card">
+        <div class="hd">
+          <div>
+            <h2>Jugador</h2>
+            <div class="meta" id="playerMeta">—</div>
+          </div>
+          <div class="row">
+            <span class="pill">🔥 Racha: <strong id="streakDays">0</strong></span>
+            <span class="pill">⭐ XP: <strong id="xp">0</strong></span>
+            <span class="pill">❤️ HP: <strong id="hp">100</strong></span>
+          </div>
+        </div>
+        <div class="bd">
+          <div class="two">
+            <div>
+              <div class="notice">
+                <strong>Modo gratuito (sin API keys):</strong> generas misiones usando ChatGPT/Claude/Gemini/Perplexity en su modo gratis.
+                Aquí la app te da un <strong>prompt + schema</strong>. Pegas la respuesta JSON y se crea la misión.
+              </div>
+
+              <div class="sep"></div>
+
+              <div class="row" style="justify-content:space-between">
+                <div class="pill">🎮 Nivel: <strong id="level">1</strong></div>
+                <div class="pill">🏅 Rank: <strong id="rank">E</strong></div>
+                <div class="pill">✅ Tareas: <strong id="tasksDoneTotal">0</strong></div>
+                <div class="pill">🏁 Misiones: <strong id="missionsDoneTotal">0</strong></div>
+              </div>
+
+              <div class="sep"></div>
+
+              <div class="row">
+                <div style="flex:1; min-width:220px">
+                  <label class="mini muted">Nombre</label>
+                  <input id="displayName" type="text" placeholder="Tu nombre (anónimo)" />
+                </div>
+              </div>
+
+              <div class="sep"></div>
+
+              <div class="mini muted" style="font-weight:900; letter-spacing:.3px">Clase de jugador (3)</div>
+              <div class="classes" id="classes"></div>
+            </div>
+
+            <div>
+              <div class="mini muted" style="font-weight:900; letter-spacing:.3px">Misiones activas (3)</div>
+              <div class="missions" id="missions"></div>
+
+              <div class="sep"></div>
+
+              <div class="mini muted" style="font-weight:900; letter-spacing:.3px">Importar misión (JSON)</div>
+              <div class="notice" style="margin-top:8px">
+                Pega una misión JSON que venga de tu IA (modo gratis). Puedes crear una por tipo: <strong>salud</strong>, <strong>mente</strong>, <strong>vida</strong>.
+              </div>
+              <textarea id="importJson" placeholder='Pega aquí el JSON de una misión...'></textarea>
+              <div class="row" style="margin-top:8px; justify-content:flex-end">
+                <button id="btnImport">Importar misión</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="mini muted" style="font-weight:900; letter-spacing:.3px">Reglas duras (para que esto funcione como hábito)</div>
+          <div class="notice" style="margin-top:8px">
+            <div>• Una tarea <strong>weekly</strong> queda <strong>bloqueada</strong> si no cumples al menos <strong>5 de 7 días</strong> de diarias en esa misión.</div>
+            <div>• Si fallas una diaria de ayer, pierdes <strong>HP</strong> (penalización automática al abrir la app).</div>
+            <div>• Multijugador: se posiciona arriba quien tenga más <strong>racha</strong>, luego más <strong>misiones</strong>, luego más <strong>tareas</strong>.</div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="card">
+        <div class="hd">
+          <div>
+            <h2>Stats & Progreso</h2>
+            <div class="meta">vitalidad • fuerza • agilidad • resistencia • inteligencia • sabiduría</div>
+          </div>
+          <div class="row">
+            <span class="pill">🎯 Semana: <strong id="weekProgress">0/7</strong></span>
+          </div>
+        </div>
+        <div class="bd">
+          <div class="chartWrap">
+            <div class="mini muted" style="font-weight:900; letter-spacing:.3px">Radar de Stats</div>
+            <canvas id="radar"></canvas>
+          </div>
+          <div class="sep"></div>
+          <div class="chartWrap">
+            <div class="mini muted" style="font-weight:900; letter-spacing:.3px">Progreso por STAT (actual)</div>
+            <canvas id="bars"></canvas>
+          </div>
+          <div class="sep"></div>
+          <div class="chartWrap">
+            <div class="mini muted" style="font-weight:900; letter-spacing:.3px">Histórico de racha (últimos 30 días)</div>
+            <canvas id="streakLine"></canvas>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="mini muted" style="font-weight:900; letter-spacing:.3px">Multijugador (Sala)</div>
+          <div class="notice" id="mpNotice" style="margin-top:8px">Sin sala activa. Crea una sala, comparte el link, y listo.</div>
+          <div class="leader" id="leaderboard" style="margin-top:10px"></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbx3DxN85TdZrTnNY14pU0-vzgYMNvEeJNpznlo8GL7z8xdE4WY7r3vRsOSDC_ejWpiIug/exec";
+const LEADERBOARD_REFRESH_MS = 60000;
+
+const STORAGE_KEY = "saga_habitos_rpg_v2";
+const MP_KEY = "saga_mp_v2";
+
+const HP_MAX = 100;
+const HP_LOSS_MISSED_DAILY = 6;
+const XP_GAIN_DAILY = 15;
+const XP_GAIN_WEEKLY = 60;
+const XP_BONUS_PHASE_COMPLETE = 120;
+const WEEKLY_DAILY_MIN = 5;
+
+const STAT_KEYS = ["vitalidad","fuerza","agilidad","resistencia","inteligencia","sabiduria"];
+
+const CLASSES = [
+  { id:"guerrero", name:"Guerrero", icon:"⚔️",
+    desc:"Sube más FUERZA y RESISTENCIA. Ideal para misiones físicas y disciplina dura.",
+    bonus:{ fuerza:1.12, resistencia:1.10, vitalidad:1.06, agilidad:1.02, inteligencia:0.96, sabiduria:0.96 } },
+  { id:"sabio", name:"Sabio", icon:"📚",
+    desc:"Sube más INTELIGENCIA y SABIDURÍA. Ideal para estudio, lectura y aprendizaje.",
+    bonus:{ inteligencia:1.12, sabiduria:1.10, resistencia:1.04, vitalidad:1.00, agilidad:0.96, fuerza:0.96 } },
+  { id:"monje", name:"Monje", icon:"🧘",
+    desc:"Balanceado. Sube VITALIDAD y RESISTENCIA, con progreso estable en todo.",
+    bonus:{ vitalidad:1.10, resistencia:1.08, sabiduria:1.03, inteligencia:1.02, agilidad:1.00, fuerza:1.00 } },
+];
+
+const STAT_WEIGHTS = {
+  salud: { vitalidad:.35, fuerza:.25, agilidad:.15, resistencia:.20, inteligencia:.03, sabiduria:.02 },
+  mente: { vitalidad:.07, fuerza:.03, agilidad:.05, resistencia:.10, inteligencia:.40, sabiduria:.35 },
+  vida:  { vitalidad:.15, fuerza:.05, agilidad:.10, resistencia:.30, inteligencia:.20, sabiduria:.20 },
+};
+const TASK_MULT = { daily: 1.0, weekly: 2.2 };
+
+let state = null;
+let charts = { radar:null, bars:null, streak:null };
+let leaderboardTimer = null;
+let lastSyncAt = 0;
+
+function nowISO(){ return new Date().toISOString(); }
+function todayKey(d=new Date()){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+function daysBetween(aKey, bKey){
+  const a = new Date(aKey+"T00:00:00");
+  const b = new Date(bKey+"T00:00:00");
+  return Math.round((b-a)/86400000);
+}
+function clamp(n,min,max){ n=Number(n); if(!Number.isFinite(n)) return min; return Math.max(min, Math.min(max, n)); }
+function deepCopy(x){ return JSON.parse(JSON.stringify(x)); }
+function toast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(()=>el.classList.remove("show"), 2200);
+}
+function slugRoomFromUrl(){
+  const u = new URL(window.location.href);
+  return u.searchParams.get("room") || "";
+}
+function rankFromLevel(level){
+  if(level >= 80) return "S";
+  if(level >= 65) return "A";
+  if(level >= 50) return "B";
+  if(level >= 35) return "C";
+  if(level >= 20) return "D";
+  return "E";
+}
+function calcLevel(xp){
+  const lvl = Math.floor(Math.sqrt(xp/120) + 1);
+  return clamp(lvl, 1, 99);
+}
+
+function defaultState(){
+  const start = todayKey();
+  return {
+    version:2,
+    player:{ displayName:"", classId:"monje", createdAt: nowISO() },
+    meta:{ startDate:start, lastOpenDate:start },
+    resources:{ hp:HP_MAX, xp:0, streakDays:0, tasksCompletedTotal:0, missionsCompletedTotal:0 },
+    stats: STAT_KEYS.reduce((acc,k)=>{acc[k]=0; return acc;}, {}),
+    history:{ daily:{} },
+    missions:{ salud:null, mente:null, vida:null }
+  };
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return defaultState();
+    const s = JSON.parse(raw);
+    if(!s.version || s.version !== 2) return defaultState();
+    return s;
+  }catch(_){ return defaultState(); }
+}
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  toast("Guardado ✅");
+}
+
+function buildIAPrompt(){
+  const cls = CLASSES.find(c=>c.id===state.player.classId) || CLASSES[2];
+  const schema = {
+    type:"salud | mente | vida",
+    title:"SAGA DE HÁBITO [Nombre del hábito] — 90 días",
+    summary:"1-2 líneas claras",
+    startDate:"YYYY-MM-DD",
+    phases:[
+      { name:"Mes 1: ...", daily:[{id:"d1", name:"...", desc:"..."}], weekly:[{id:"w1", name:"...", desc:"..."}] },
+      { name:"Mes 2: ...", daily:[{id:"d1", name:"...", desc:"..."}], weekly:[{id:"w1", name:"...", desc:"..."}] },
+      { name:"Mes 3: ...", daily:[{id:"d1", name:"...", desc:"..."}], weekly:[{id:"w1", name:"...", desc:"..."}] }
+    ]
+  };
+
+  return `
+Actúa como diseñador de hábitos + diseñador de misiones RPG.
+
+Necesito que generes UNA misión en JSON estrictamente válido (sin markdown, sin comentarios, sin texto extra). 
+Debe cumplir el schema EXACTO (phases = 3). 
+Cada fase debe tener:
+- daily: mínimo 3 tareas (acciones pequeñas, 10–45 min, realizables)
+- weekly: mínimo 1 tarea (hito semanal, 45–120 min)
+Las tareas deben ser específicas, accionables y medibles.
+
+Contexto del jugador:
+- Clase: ${cls.name}
+- Stats objetivo: vitalidad, fuerza, agilidad, resistencia, inteligencia, sabiduría
+Reglas de diseño:
+- Si type = salud: prioriza actividad física / movilidad / energía.
+- Si type = mente: prioriza estudio / lectura / práctica cognitiva.
+- Si type = vida: prioriza orden personal / finanzas / casa / relaciones / disciplina.
+No uses lenguaje vago ("mejorar", "hacer más"). Define acciones.
+
+Devuelve SOLAMENTE el JSON.
+Schema:
+${JSON.stringify(schema, null, 2)}
+`.trim();
+}
+
+function sanitizeMission(m){
+  if(!m || typeof m !== "object") throw new Error("JSON inválido: no es objeto.");
+  const type = String(m.type||"").trim().toLowerCase();
+  if(!["salud","mente","vida"].includes(type)) throw new Error("type debe ser: salud | mente | vida");
+  const phases = Array.isArray(m.phases) ? m.phases : [];
+  if(phases.length !== 3) throw new Error("phases debe tener exactamente 3 elementos (Mes 1,2,3).");
+  const title = String(m.title||"").trim() || `SAGA DE HÁBITO (${type}) — 90 días`;
+  const summary = String(m.summary||"").trim() || "";
+  const startDate = String(m.startDate||todayKey()).trim() || todayKey();
+
+  const normPhases = phases.map((p, idx)=>{
+    const name = String(p.name||"").trim() || `Fase ${idx+1}`;
+    const daily = Array.isArray(p.daily) ? p.daily : [];
+    const weekly = Array.isArray(p.weekly) ? p.weekly : [];
+    if(daily.length < 3) throw new Error(`Fase ${idx+1}: daily debe tener al menos 3 tareas.`);
+    if(weekly.length < 1) throw new Error(`Fase ${idx+1}: weekly debe tener al menos 1 tarea.`);
+    const normTasks = (arr, kind)=>arr.map((t,i)=>{
+      const id = String(t.id||`${kind}_${idx+1}_${i+1}`).trim();
+      const nameT = String(t.name||"").trim() || `Tarea ${i+1}`;
+      const desc = String(t.desc||"").trim() || "";
+      return { id, name:nameT, desc };
+    });
+    return { name, daily: normTasks(daily,"d"), weekly: normTasks(weekly,"w") };
+  });
+
+  return {
+    type, title, summary, startDate,
+    phases: normPhases,
+    progress:{ currentPhase:0, completion:{}, phasesCompleted:[false,false,false] }
+  };
+}
+
+function getMission(type){ return state.missions[type]; }
+function ensureCompletionObj(m, date){
+  if(!m.progress.completion[date]) m.progress.completion[date] = { daily:{}, weekly:{} };
+  return m.progress.completion[date];
+}
+function isTaskDone(m, date, kind, taskId){
+  const c = m.progress.completion[date];
+  if(!c) return false;
+  if(kind==="daily") return !!c.daily[taskId];
+  const w = c.weekly[String(m.progress.currentPhase)] || {};
+  return !!w[taskId];
+}
+function setTaskDone(m, date, kind, taskId, done){
+  const c = ensureCompletionObj(m, date);
+  if(kind==="daily"){ c.daily[taskId] = !!done; }
+  else{
+    if(!c.weekly[String(m.progress.currentPhase)]) c.weekly[String(m.progress.currentPhase)] = {};
+    c.weekly[String(m.progress.currentPhase)][taskId] = !!done;
+  }
+}
+
+function getWeekStartForMission(m){
+  const start = m.startDate;
+  const t = todayKey();
+  const delta = daysBetween(start, t);
+  const offset = delta >= 0 ? (delta % 7) : 0;
+  const d = new Date(t+"T00:00:00");
+  d.setDate(d.getDate() - offset);
+  return todayKey(d);
+}
+function countDailyPerfectDaysInWeek(m, weekStartKey){
+  let perfect = 0;
+  const phase = m.phases[m.progress.currentPhase];
+  for(let i=0;i<7;i++){
+    const d = new Date(weekStartKey+"T00:00:00");
+    d.setDate(d.getDate()+i);
+    const key = todayKey(d);
+    const comp = (m.progress.completion[key]?.daily) || {};
+    const allDone = phase.daily.every(t=>!!comp[t.id]);
+    if(allDone) perfect++;
+  }
+  return perfect;
+}
+
+function markHistoryDidSomething(dateKey, did){ state.history.daily[dateKey] = { did: !!did }; }
+function recalcStreak(){
+  const today = todayKey();
+  let streak = 0;
+  for(let i=0;i<365;i++){
+    const d = new Date(today+"T00:00:00");
+    d.setDate(d.getDate()-i);
+    const k = todayKey(d);
+    const did = !!state.history.daily[k]?.did;
+    if(!did) break;
+    streak++;
+  }
+  state.resources.streakDays = streak;
+}
+
+function processMissedDailiesOnOpen(){
+  const last = state.meta.lastOpenDate || todayKey();
+  const today = todayKey();
+  if(last === today) return;
+
+  const y = new Date(today+"T00:00:00"); y.setDate(y.getDate()-1);
+  const yKey = todayKey(y);
+
+  let missedCount = 0;
+  for(const type of ["salud","mente","vida"]){
+    const m = state.missions[type];
+    if(!m) continue;
+    const phase = m.phases[m.progress.currentPhase];
+    const comp = m.progress.completion[yKey]?.daily || {};
+    const miss = phase.daily.filter(t=>!comp[t.id]).length;
+    missedCount += miss;
+  }
+  if(missedCount > 0){
+    const loss = missedCount * HP_LOSS_MISSED_DAILY;
+    state.resources.hp = Math.max(0, state.resources.hp - loss);
+    toast(`Penalización: -${loss} HP (diarias no hechas ayer).`);
+  }
+  state.meta.lastOpenDate = today;
+}
+
+function applyStatsGain(mType, kind, xpGain){
+  const w = STAT_WEIGHTS[mType];
+  const mult = TASK_MULT[kind];
+  const cls = CLASSES.find(c=>c.id===state.player.classId) || CLASSES[2];
+  const basePoints = (xpGain/10) * mult;
+  for(const k of STAT_KEYS){
+    const add = basePoints * (w[k]||0) * (cls.bonus[k]||1);
+    state.stats[k] = Math.round((state.stats[k] + add) * 100) / 100;
+  }
+}
+function applyRewards(mType, kind){
+  const xpGain = (kind==="daily") ? XP_GAIN_DAILY : XP_GAIN_WEEKLY;
+  state.resources.xp += xpGain;
+  applyStatsGain(mType, kind, xpGain);
+  state.resources.tasksCompletedTotal += 1;
+  markHistoryDidSomething(todayKey(), true);
+}
+
+function maybeCompletePhase(m){
+  const phase = m.phases[m.progress.currentPhase];
+  const key = todayKey();
+  const c = m.progress.completion[key] || {weekly:{}};
+  const w = c.weekly[String(m.progress.currentPhase)] || {};
+  const allWeeklyDone = phase.weekly.every(t=>!!w[t.id]);
+  if(!allWeeklyDone) return;
+
+  if(!m.progress.phasesCompleted[m.progress.currentPhase]){
+    m.progress.phasesCompleted[m.progress.currentPhase] = true;
+    state.resources.xp += XP_BONUS_PHASE_COMPLETE;
+    applyStatsGain(m.type, "weekly", XP_BONUS_PHASE_COMPLETE);
+    state.resources.missionsCompletedTotal += 1;
+  }
+  if(m.progress.currentPhase < 2){
+    m.progress.currentPhase += 1;
+    toast(`Fase completada ✅ Pasaste a ${m.phases[m.progress.currentPhase].name}`);
+  } else {
+    toast("🎉 Misión 90 días completada.");
+  }
+}
+
+function toggleTask(mType, kind, taskId){
+  const m = getMission(mType);
+  if(!m) return;
+
+  if(kind==="weekly"){
+    const weekStart = getWeekStartForMission(m);
+    const perfect = countDailyPerfectDaysInWeek(m, weekStart);
+    if(perfect < WEEKLY_DAILY_MIN){
+      toast(`Weekly bloqueada: necesitas ${WEEKLY_DAILY_MIN}/7 días perfectos (tienes ${perfect}/7).`);
+      return;
+    }
+  }
+
+  const date = todayKey();
+  const was = isTaskDone(m, date, kind, taskId);
+  const next = !was;
+  setTaskDone(m, date, kind, taskId, next);
+
+  if(next){
+    applyRewards(mType, kind);
+    toast(kind==="daily" ? "+XP diaria ✅" : "+XP weekly ✅");
+  } else {
+    const xpLoss = (kind==="daily") ? XP_GAIN_DAILY : XP_GAIN_WEEKLY;
+    state.resources.xp = Math.max(0, state.resources.xp - xpLoss);
+    state.resources.hp = Math.max(0, state.resources.hp - 2);
+    state.resources.tasksCompletedTotal = Math.max(0, state.resources.tasksCompletedTotal - 1);
+    toast("Revertido ↩️");
+  }
+
+  maybeCompletePhase(m);
+  renderAll();
+  syncMyScoreMaybe();
+}
+
+function escapeHtml(s){
+  return String(s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[m]));
+}
+
+function missionIcon(type){
+  if(type==="salud") return '<span class="dot health"></span>';
+  if(type==="mente") return '<span class="dot mind"></span>';
+  return '<span class="dot life"></span>';
+}
+
+function renderTop(){
+  document.getElementById("todayLabel").textContent = todayKey();
+  document.getElementById("displayName").value = state.player.displayName || "";
+  const clsName = CLASSES.find(c=>c.id===state.player.classId)?.name || "Monje";
+  document.getElementById("playerMeta").textContent = `${state.player.displayName ? state.player.displayName : "Anónimo"} • Clase: ${clsName}`;
+
+  recalcStreak();
+  document.getElementById("hp").textContent = String(state.resources.hp);
+  document.getElementById("xp").textContent = String(state.resources.xp);
+  document.getElementById("streakDays").textContent = String(state.resources.streakDays);
+
+  const lvl = calcLevel(state.resources.xp);
+  document.getElementById("level").textContent = String(lvl);
+  document.getElementById("rank").textContent = rankFromLevel(lvl);
+
+  document.getElementById("tasksDoneTotal").textContent = String(state.resources.tasksCompletedTotal);
+  document.getElementById("missionsDoneTotal").textContent = String(state.resources.missionsCompletedTotal);
+
+  let best = 0;
+  for(const type of ["salud","mente","vida"]){
+    const m = state.missions[type];
+    if(!m) continue;
+    const ws = getWeekStartForMission(m);
+    best = Math.max(best, countDailyPerfectDaysInWeek(m, ws));
+  }
+  document.getElementById("weekProgress").textContent = `${best}/7`;
+}
+
+function renderClasses(){
+  const wrap = document.getElementById("classes");
+  wrap.innerHTML = "";
+  CLASSES.forEach(c=>{
+    const el = document.createElement("div");
+    el.className = "classCard" + (state.player.classId===c.id ? " selected" : "");
+    el.innerHTML = `
+      <div class="cTop">
+        <div class="classIcon">${c.icon}</div>
+        <div>
+          <h4>${c.name}</h4>
+          <p>${c.desc}</p>
+        </div>
+      </div>
+    `;
+    el.addEventListener("click", ()=>{
+      state.player.classId = c.id;
+      renderClasses();
+      renderCharts();
+      syncMyScoreMaybe();
+      toast(`Clase: ${c.name}`);
+    });
+    wrap.appendChild(el);
+  });
+}
+
+function renderMissions(){
+  const wrap = document.getElementById("missions");
+  wrap.innerHTML = "";
+
+  ["salud","mente","vida"].forEach(type=>{
+    const m = state.missions[type];
+    const el = document.createElement("div");
+    el.className = "mission";
+
+    if(!m){
+      el.innerHTML = `
+        <div class="tag">
+          <div class="type">${missionIcon(type)} ${type.toUpperCase()}</div>
+          <span class="pill">Vacío</span>
+        </div>
+        <h3>Importa una misión</h3>
+        <div class="small">Usa “Prompt IA”, genera JSON gratis, y pégalo.</div>
+      `;
+      wrap.appendChild(el);
+      return;
+    }
+
+    const phase = m.phases[m.progress.currentPhase];
+    const weekStart = getWeekStartForMission(m);
+    const perfect = countDailyPerfectDaysInWeek(m, weekStart);
+    const weeklyUnlocked = perfect >= WEEKLY_DAILY_MIN;
+
+    const today = todayKey();
+    const taskHtml = (t, kind)=>{
+      const done = isTaskDone(m, today, kind, t.id);
+      let badge = "";
+      if(kind==="weekly" && !weeklyUnlocked && !done) badge = '<span class="badge lock">LOCK</span>';
+      else if(done) badge = '<span class="badge done">DONE</span>';
+      else badge = `<span class="badge">${kind.toUpperCase()}</span>`;
+      return `
+        <div class="task">
+          <input type="checkbox" ${done?"checked":""} data-type="${type}" data-kind="${kind}" data-id="${escapeHtml(t.id)}" />
+          <div class="t">
+            <div class="name">${escapeHtml(t.name)}</div>
+            <div class="desc">${escapeHtml(t.desc)}</div>
+          </div>
+          ${badge}
+        </div>
+      `;
+    };
+
+    el.innerHTML = `
+      <div class="tag">
+        <div class="type">${missionIcon(type)} ${type.toUpperCase()}</div>
+        <span class="pill">Fase: <strong>${escapeHtml(phase.name)}</strong></span>
+      </div>
+      <h3 title="${escapeHtml(m.title)}">${escapeHtml(m.title)}</h3>
+      <div class="small">${escapeHtml(m.summary || "")}</div>
+
+      <div class="sep"></div>
+
+      <div class="notice">
+        Semana actual: <span class="mono">${escapeHtml(weekStart)}</span><br>
+        Días perfectos: <strong>${perfect}/7</strong> • Weekly: <strong>${weeklyUnlocked ? "DESBLOQUEADA" : "BLOQUEADA"}</strong>
+      </div>
+
+      <div class="tasks">
+        ${phase.daily.map(t=>taskHtml(t,"daily")).join("")}
+        <div class="sep"></div>
+        ${phase.weekly.map(t=>taskHtml(t,"weekly")).join("")}
+      </div>
+    `;
+    wrap.appendChild(el);
+  });
+
+  wrap.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+    cb.addEventListener("change", (ev)=>{
+      const t = ev.target.getAttribute("data-type");
+      const kind = ev.target.getAttribute("data-kind");
+      const id = ev.target.getAttribute("data-id");
+      toggleTask(t, kind, id);
+    });
+  });
+}
+
+function renderCharts(){
+  const labels = ["Vitalidad","Fuerza","Agilidad","Resistencia","Inteligencia","Sabiduría"];
+  const vals = STAT_KEYS.map(k => Number(state.stats[k] || 0));
+
+  const radarCtx = document.getElementById("radar");
+  if(charts.radar) charts.radar.destroy();
+  charts.radar = new Chart(radarCtx, {
+    type:"radar",
+    data:{ labels, datasets:[{ label:"Stats", data: vals, fill:true, borderWidth:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false, scales:{ r:{ beginAtZero:true, ticks:{display:false} } }, plugins:{ legend:{display:false} } }
+  });
+
+  const barsCtx = document.getElementById("bars");
+  if(charts.bars) charts.bars.destroy();
+  charts.bars = new Chart(barsCtx, {
+    type:"bar",
+    data:{ labels, datasets:[{ label:"Puntos", data: vals, borderWidth:1 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ y:{ beginAtZero:true } } }
+  });
+
+  const lineCtx = document.getElementById("streakLine");
+  if(charts.streak) charts.streak.destroy();
+  const today = todayKey();
+  const xs = [], ys = [];
+  let running = 0;
+  for(let i=29;i>=0;i--){
+    const d = new Date(today+"T00:00:00"); d.setDate(d.getDate()-i);
+    const k = todayKey(d);
+    xs.push(k.slice(5));
+    const did = !!state.history.daily[k]?.did;
+    running = did ? (running+1) : 0;
+    ys.push(running);
+  }
+  charts.streak = new Chart(lineCtx, {
+    type:"line",
+    data:{ labels: xs, datasets:[{ label:"Racha", data: ys, tension:.25, borderWidth:2, pointRadius:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ y:{ beginAtZero:true } } }
+  });
+}
+
+function renderAll(){
+  renderTop();
+  renderClasses();
+  renderMissions();
+  renderCharts();
+}
+
+function importMission(){
+  const txt = document.getElementById("importJson").value.trim();
+  if(!txt){ toast("Pega un JSON primero."); return; }
+  try{
+    const parsed = JSON.parse(txt);
+    const m = sanitizeMission(parsed);
+    state.missions[m.type] = m;
+    document.getElementById("importJson").value = "";
+    toast(`Misión importada ✅ (${m.type})`);
+    renderAll();
+    syncMyScoreMaybe();
+  }catch(e){ toast(String(e.message || e)); }
+}
+
+function copyPrompt(){
+  const p = buildIAPrompt();
+  navigator.clipboard.writeText(p).then(()=>toast("Prompt copiado ✅")).catch(()=>toast("No se pudo copiar."));
+}
+async function copyInvite(){
+  const roomId = slugRoomFromUrl();
+  if(!roomId){ toast("No estás en una sala. Crea una."); return; }
+  const baseUrl = window.location.origin + window.location.pathname;
+  const inviteUrl = `${baseUrl}?room=${encodeURIComponent(roomId)}`;
+  await navigator.clipboard.writeText(inviteUrl);
+  toast("Link copiado ✅");
+}
+function resetAll(){
+  if(!confirm("¿Reset total? Se borrará el progreso local.")) return;
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(MP_KEY);
+  state = defaultState();
+  renderAll();
+  toast("Reset ✅");
+}
+
+/* Multiplayer */
+async function apiPost(action, data){
+  if(!GAS_API_URL || GAS_API_URL.includes("PEGA_AQUI")) throw new Error("Configura GAS_API_URL en el HTML.");
+  const url = `${GAS_API_URL}?action=${encodeURIComponent(action)}`;
+  const res = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(data||{}) });
+  return res.json();
+}
+async function apiGet(action, params){
+  if(!GAS_API_URL || GAS_API_URL.includes("PEGA_AQUI")) throw new Error("Configura GAS_API_URL en el HTML.");
+  const qs = new URLSearchParams({ action, ...(params||{}) }).toString();
+  const res = await fetch(`${GAS_API_URL}?${qs}`);
+  return res.json();
+}
+function loadMP(){ try{ return JSON.parse(localStorage.getItem(MP_KEY)||"{}"); }catch(_){ return {}; } }
+function saveMP(mp){ localStorage.setItem(MP_KEY, JSON.stringify(mp||{})); }
+
+async function createRoom(){
+  const name = prompt("Nombre de sala (opcional):") || "";
+  const r = await apiPost("createRoom", { name });
+  if(r.error) throw new Error(r.error);
+  const baseUrl = window.location.origin + window.location.pathname;
+  const inviteUrl = `${baseUrl}?room=${encodeURIComponent(r.roomId)}`;
+  await navigator.clipboard.writeText(inviteUrl);
+  toast("Link de sala copiado ✅");
+  window.location.href = inviteUrl;
+}
+
+async function ensureJoined(roomId){
+  const mp = loadMP();
+  if(mp.roomId === roomId && mp.playerId && mp.token) return mp;
+
+  const displayName = (state.player.displayName || "").trim() || prompt("Tu nombre de jugador (opcional):") || "";
+  const r = await apiPost("joinRoom", { roomId, displayName });
+  if(r.error) throw new Error(r.error);
+  const next = { roomId:r.roomId, playerId:r.playerId, token:r.token, displayName:r.displayName };
+  saveMP(next);
+  if(!state.player.displayName) state.player.displayName = r.displayName || "";
+  return next;
+}
+
+async function refreshLeaderboard(){
+  const roomId = slugRoomFromUrl();
+  if(!roomId) return;
+  const r = await apiGet("getLeaderboard", { roomId });
+  if(r.error) return;
+
+  const list = r.leaderboard || [];
+  const wrap = document.getElementById("leaderboard");
+  wrap.innerHTML = "";
+  if(list.length === 0){ wrap.innerHTML = '<div class="notice">Aún no hay jugadores registrados.</div>'; return; }
+  list.slice(0, 15).forEach((p, idx)=>{
+    const el = document.createElement("div");
+    el.className = "leaderItem";
+    const sub = `🔥 ${p.streakDays} • 🏁 ${p.missionsCompleted} • ✅ ${p.tasksCompleted} • ⭐ ${p.xp}`;
+    el.innerHTML = `
+      <div class="left">
+        <div class="name">${escapeHtml(p.displayName || ("Jugador "+(idx+1)))}</div>
+        <div class="sub">${sub}</div>
+      </div>
+      <div class="rank">#${idx+1}</div>
+    `;
+    wrap.appendChild(el);
+  });
+}
+
+async function startMultiplayerIfRoom(){
+  const roomId = slugRoomFromUrl();
+  const mpNotice = document.getElementById("mpNotice");
+  if(!roomId){
+    mpNotice.textContent = "Sin sala activa. Crea una sala, comparte el link, y listo.";
+    return;
+  }
+  mpNotice.innerHTML = `Sala activa: <span class="mono">${escapeHtml(roomId)}</span><br><span class="muted">Refresco cada 60s.</span>`;
+  try{
+    await ensureJoined(roomId);
+    await refreshLeaderboard();
+    if(leaderboardTimer) clearInterval(leaderboardTimer);
+    leaderboardTimer = setInterval(refreshLeaderboard, LEADERBOARD_REFRESH_MS);
+  }catch(e){
+    mpNotice.innerHTML = `Sala detectada, pero falta configurar el backend.<br><span class="muted">Configura GAS_API_URL en el HTML.</span>`;
+  }
+}
+
+async function syncMyScoreMaybe(){
+  const roomId = slugRoomFromUrl();
+  if(!roomId) return;
+  const mp = loadMP();
+  if(!mp.roomId || !mp.playerId || !mp.token) return;
+
+  const now = Date.now();
+  if(now - lastSyncAt < 3500) return;
+  lastSyncAt = now;
+
+  try{
+    await apiPost("updateScore", {
+      roomId: mp.roomId, playerId: mp.playerId, token: mp.token,
+      streakDays: state.resources.streakDays,
+      tasksCompleted: state.resources.tasksCompletedTotal,
+      missionsCompleted: state.resources.missionsCompletedTotal,
+      xp: state.resources.xp,
+      stats: deepCopy(state.stats)
+    });
+  }catch(_){}
+}
+
+function init(){
+  state = loadState();
+  document.getElementById("todayLabel").textContent = todayKey();
+  processMissedDailiesOnOpen();
+
+  const roomId = slugRoomFromUrl();
+  const st = document.getElementById("subtitle");
+  st.textContent = roomId ? `Sala: ${roomId} • Refresh 60s • Sin API keys` : "Single‑player • Sin API keys • Stats 6 • Multijugador por sala";
+
+  document.getElementById("btnSave").addEventListener("click", ()=>{ recalcStreak(); saveState(); syncMyScoreMaybe(); });
+  document.getElementById("btnReset").addEventListener("click", resetAll);
+  document.getElementById("btnImport").addEventListener("click", importMission);
+  document.getElementById("btnCopyPrompt").addEventListener("click", copyPrompt);
+  document.getElementById("btnInvite").addEventListener("click", copyInvite);
+  document.getElementById("btnCreateRoom").addEventListener("click", async ()=>{ try{ await createRoom(); }catch(e){ toast(String(e.message||e)); } });
+
+  document.getElementById("displayName").addEventListener("input", (ev)=>{ state.player.displayName = ev.target.value.slice(0,40); });
+
+  const t = todayKey();
+  let did = false;
+  for(const type of ["salud","mente","vida"]){
+    const m = state.missions[type];
+    if(!m) continue;
+    const comp = m.progress.completion[t]?.daily || {};
+    const compW = m.progress.completion[t]?.weekly?.[String(m.progress.currentPhase)] || {};
+    did = did || Object.values(comp).some(Boolean) || Object.values(compW).some(Boolean);
+  }
+  markHistoryDidSomething(t, did);
+  recalcStreak();
+
+  renderAll();
+  startMultiplayerIfRoom();
+
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.visibilityState === "hidden"){
+      recalcStreak();
+      saveState();
+    }
+  });
+}
+document.addEventListener("DOMContentLoaded", init);
+</script>
+
+<script>
+(function(){
+  if(!("serviceWorker" in navigator)) return;
+  const swCode = `
+    const CACHE = "saga-cache-v2";
+    self.addEventListener("install", (e)=>{ self.skipWaiting(); e.waitUntil(caches.open(CACHE)); });
+    self.addEventListener("activate", (e)=>{ e.waitUntil(self.clients.claim()); });
+    self.addEventListener("fetch", (e)=>{
+      const req = e.request;
+      if(req.method !== "GET") return;
+      e.respondWith((async ()=>{
+        const cache = await caches.open(CACHE);
+        const cached = await cache.match(req);
+        if(cached) return cached;
+        try{
+          const fresh = await fetch(req);
+          if(new URL(req.url).origin === location.origin) cache.put(req, fresh.clone());
+          return fresh;
+        }catch(err){
+          return cached || Response.error();
+        }
+      })());
+    });
+  `;
+  const blob = new Blob([swCode], {type:"text/javascript"});
+  const url = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(url).catch(()=>{});
+})();
+</script>
+
+</body>
+</html>
