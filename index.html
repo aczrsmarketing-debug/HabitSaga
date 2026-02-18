@@ -701,6 +701,7 @@ body::after {
 .chart-wrap { position: relative; height: 180px; }
 .chart-wrap-sm { position: relative; height: 130px; }
 
+.chart-wrap canvas, .chart-wrap-sm canvas { width: 100%; height: 100%; display: block; }
 .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
 .stat-kpi {
   background: var(--bg-1); border: 1px solid var(--border);
@@ -1389,7 +1390,7 @@ const CLASS_BONUS = {
 };
 
 // Multiplayer (Google Apps Script) — ya incluído
-const GAS_API_URL = "https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycby6mk9b8LPhFUt5zJqBJ4xpvWGbpxJLcSVJ9HVXyrE7GBHJLerM4YZsl4qcoEfcNjTDiA/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbx3DxN85TdZrTnNY14pU0-vzgYMNvEeJNpznlo8GL7z8xdE4WY7r3vRsOSDC_ejWpiIug/exec";
 const LEADERBOARD_REFRESH_MS = 60000;
 
 
@@ -1602,7 +1603,7 @@ function navigate(screen) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('screen-' + screen)?.classList.add('active');
   document.getElementById('nav-' + screen)?.classList.add('active');
-  if (screen === 'stats') refreshCharts();
+  if (screen === 'stats') refreshChartsSoon();
   if (screen === 'arena') renderLeaderboard();
   if (screen === 'profile') renderProfile();
   if (screen === 'missions') renderChatScreen();
@@ -2607,6 +2608,18 @@ function initBarChart() {
   state.charts.bar = { destroy(){} };
 }
 
+
+function refreshChartsSoon(){
+  // Espera a que la pantalla STATS sea visible y tenga tamaño real
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      try { refreshCharts(); } catch(e){ console.warn('refreshCharts failed', e); }
+    });
+  });
+}
+
+
+window.addEventListener('resize', () => { if (state.currentScreen === 'stats') refreshChartsSoon(); });
 function refreshCharts() {
   const c = state.character;
   const streak = getStreak();
@@ -2713,7 +2726,10 @@ function applyTheme() {
   setTimeout(() => {
     try { setChartDefaults(); refreshCharts(); } catch(_) {}
   }, 0);
+
+  if (state.currentScreen === 'stats') refreshChartsSoon();
 }
+
 
 function toggleDark() {
   state.settings.darkMode = !state.settings.darkMode;
