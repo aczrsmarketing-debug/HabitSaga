@@ -1214,6 +1214,16 @@ html[data-theme="light"] .hint{ color: rgba(3,17,13,0.65); }
             </div>
             <div class="toggle on" id="dark-toggle" onclick="toggleDark()"></div>
           </div>
+
+          <div class="settings-item" onclick="setGasUrl()">
+            <div class="settings-item-icon">🌐</div>
+            <div class="settings-item-info">
+              <div class="settings-item-label">Multiplayer (GAS)</div>
+              <div class="settings-item-desc" id="gas-url-display">Configurar URL de Google Apps Script</div>
+            </div>
+            <div class="settings-item-action">›</div>
+          </div>
+
           <div class="settings-item" onclick="editName()">
             <div class="settings-item-icon">✏️</div>
             <div class="settings-item-info">
@@ -1390,7 +1400,22 @@ const CLASS_BONUS = {
 };
 
 // Multiplayer (Google Apps Script) — ya incluído
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbx3DxN85TdZrTnNY14pU0-vzgYMNvEeJNpznlo8GL7z8xdE4WY7r3vRsOSDC_ejWpiIug/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycby6mk9b8LPhFUt5zJqBJ4xpvWGbpxJLcSVJ9HVXyrE7GBHJLerM4YZsl4qcoEfcNjTDiA/exec"; 
+
+function getGasApiUrl(){
+  // Prioridad: state.settings.gasUrl -> localStorage -> constante
+  try{
+    const fromState = state?.settings?.gasUrl;
+    if(fromState && String(fromState).trim()) return String(fromState).trim();
+  }catch(_){}
+  try{
+    const fromLS = localStorage.getItem("HABITSAGA_GAS_URL");
+    if(fromLS && String(fromLS).trim()) return String(fromLS).trim();
+  }catch(_){}
+  return (GAS_API_URL || "").trim();
+}
+
+// Configura en Perfil > Ajustes > Multiplayer (GAS) o pega tu /exec aquí
 const LEADERBOARD_REFRESH_MS = 60000;
 
 
@@ -2738,6 +2763,40 @@ function toggleDark() {
   showToast(state.settings.darkMode ? '🌙 Modo oscuro' : '☀️ Modo claro');
 }
 
+
+function setGasUrl(){
+  const current = getGasApiUrl() || "";
+  const url = prompt("Pega aquí la URL del Web App de Google Apps Script (termina en /exec):", current);
+  if(url === null) return;
+  const cleaned = String(url).trim();
+  if(!cleaned){
+    try{ localStorage.removeItem("HABITSAGA_GAS_URL"); }catch(_){}
+    if(state?.settings) state.settings.gasUrl = "";
+    updateGasUrlDisplay();
+    toast("GAS URL borrada.");
+    return;
+  }
+  const ok = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec\/?$/.test(cleaned);
+  if(!ok){
+    alert("La URL no parece válida. Debe verse como:\nhttps://script.google.com/macros/s/<ID>/exec");
+    return;
+  }
+  try{ localStorage.setItem("HABITSAGA_GAS_URL", cleaned); }catch(_){}
+  if(state?.settings) state.settings.gasUrl = cleaned;
+  saveState();
+  updateGasUrlDisplay();
+  toast("GAS URL guardada.");
+}
+
+function updateGasUrlDisplay(){
+  const el = document.getElementById("gas-url-display");
+  if(!el) return;
+  const u = getGasApiUrl();
+  if(u) el.textContent = u.replace(/^https:\/\//,'').slice(0,48) + (u.length>60 ? "…" : "");
+  else el.textContent = "Configurar URL de Google Apps Script";
+}
+
+
 function editName() {
   const n = prompt('Nuevo nombre:', state.character.name);
   if (n && n.trim()) {
@@ -2810,11 +2869,12 @@ let mpTimer = null;
 let lastSyncAt = 0;
 
 function jsonpCall(action, params){
-  if(!GAS_API_URL) return Promise.reject(new Error("GAS_API_URL no configurado."));
+  const GAS_URL = getGasApiUrl();
+  if(!GAS_URL) return Promise.reject(new Error("GAS_API_URL no configurado."));
   return new Promise((resolve, reject)=>{
     const cb = "cb_" + Math.random().toString(36).slice(2);
     const qs = new URLSearchParams({ action, callback: cb, ...(params||{}) }).toString();
-    const src = `${GAS_API_URL}?${qs}`;
+    const src = `${GAS_URL}?${qs}`;
 
     const script = document.createElement("script");
     let done = false;
@@ -3233,6 +3293,7 @@ window.addEventListener('DOMContentLoaded', () => {
   link.rel = 'manifest'; link.href = URL.createObjectURL(blob);
   document.head.appendChild(link);
 })();
+<script>try{updateGasUrlDisplay();}catch(_){}</script>
 </script>
 
 </body>
