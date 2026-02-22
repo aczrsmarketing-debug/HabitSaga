@@ -193,27 +193,13 @@ var GREEN='#6CFF3D',AMBER='#FFC857',RED='#FF3B30',MUTED='#9BA3AB';
 
 // ─── DEFAULT STATE ────────────────────────────────────────────────────────────
 var DEF={
-  player:{name:'OPERADOR',xp:120,hp:85,maxHp:100,streak:3},
-  stats:{vitalidad:14,fuerza:18,agilidad:12,resistencia:16,inteligencia:20,sabiduria:11},
-  saga:{name:'PROTOCOLO ALFA',objective:'Establecer rutina de alto rendimiento',
-        startDate:new Date(Date.now()-12*864e5).toISOString(),totalDays:90},
-  weeklyMissions:[
-    {id:'w1',name:'RESISTENCIA FÍSICA',description:'Completa 5 sesiones de entrenamiento esta semana',progress:3,total:5,stat:'fuerza'},
-    {id:'w2',name:'CLARIDAD MENTAL',description:'Medita al menos 15 min durante 4 días',progress:2,total:4,stat:'sabiduria'}
-  ],
-  dailyTasks:[
-    {id:'t1',name:'Entrenamiento 30 min',difficulty:'C',stat:'fuerza',done:false,critical:true},
-    {id:'t2',name:'Leer 20 páginas',difficulty:'D',stat:'inteligencia',done:false,critical:false},
-    {id:'t3',name:'Meditación 10 min',difficulty:'D',stat:'sabiduria',done:false,critical:false},
-    {id:'t4',name:'Beber 2L de agua',difficulty:'E',stat:'vitalidad',done:false,critical:false},
-    {id:'t5',name:'Dormir 7+ horas',difficulty:'C',stat:'resistencia',done:false,critical:true}
-  ],
-  history:(function(){
-    var tasks=[4,5,3,4,5,1,4];
-    return tasks.map(function(n,i){
-      return{date:new Date(Date.now()-(i+1)*864e5).toISOString(),xpGained:n*70,tasksCompleted:n,totalTasks:5};
-    });
-  })()
+  player:{name:'OPERADOR',xp:0,hp:100,maxHp:100,streak:0},
+  stats:{vitalidad:0,fuerza:0,agilidad:0,resistencia:0,inteligencia:0,sabiduria:0},
+  saga:{name:'SIN SAGA ACTIVA',objective:'Usa el generador IA en Perfil para crear tu primera misión',
+        startDate:new Date().toISOString(),totalDays:90},
+  weeklyMissions:[],
+  dailyTasks:[],
+  history:[]
 };
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
@@ -305,6 +291,9 @@ function renderM(){
   h+='<div style="display:flex;justify-content:space-between">'+mn(elapsed+' días',9)+mn(S.saga.totalDays-elapsed+' restantes',9)+'</div></div>';
 
   h+='<span class="slbl">■ MISIONES SEMANALES</span>';
+  if(S.weeklyMissions.length===0){
+    h+='<div style="color:#9BA3AB;font-size:12px;padding:10px 0;font-family:\'Share Tech Mono\',monospace;letter-spacing:1px;border:1px solid #2A3036;padding:12px;text-align:center">SIN MISIONES ACTIVAS<br><span style="color:#6CFF3D">→ Ve a PERFIL y usa el generador IA</span></div>';
+  }
   S.weeklyMissions.forEach(function(m){
     var p=Math.min((m.progress/m.total)*100,100);
     var col=p>=100?GREEN:AMBER;
@@ -319,6 +308,9 @@ function renderM(){
   h+='<span class="slbl" style="margin:0">■ OBJETIVOS DEL DÍA</span>';
   h+=mn(done+'/'+total,10,done===total?GREEN:MUTED)+'</div>';
 
+  if(S.dailyTasks.length===0){
+    h+='<div style="color:#9BA3AB;font-size:12px;font-family:\'Share Tech Mono\',monospace;letter-spacing:1px;border:1px solid #2A3036;padding:12px;text-align:center">SIN TAREAS ACTIVAS<br><span style="color:#6CFF3D">→ Genera una misión para comenzar</span></div>';
+  }
   S.dailyTasks.forEach(function(t){
     var ac=t.done?GREEN:t.critical?AMBER:'transparent';
     h+='<div class="tcard'+(t.critical&&!t.done?' crit':'')+(t.done?' done':'')+'">';
@@ -424,6 +416,10 @@ function renderH(){
 
   var log='';
   var rev=[].concat(S.history).reverse();
+  if(rev.length===0){
+    el.innerHTML+='<div class="panel" style="text-align:center;padding:20px;color:#9BA3AB;font-family:\'Share Tech Mono\',monospace;font-size:11px;letter-spacing:2px">SIN HISTORIAL AÚN<br><span style="color:#6CFF3D;margin-top:6px;display:block">COMPLETA TU PRIMERA TAREA</span></div>';
+    return;
+  }
   rev.forEach(function(h,i){
     var p=Math.round((h.tasksCompleted/h.totalTasks)*100);
     var col=p>=100?GREEN:p>=60?AMBER:RED;
@@ -509,7 +505,7 @@ function saveKey(){
 }
 function resetAll(){
   if(!confirm('¿Resetear todo el progreso?'))return;
-  try{localStorage.removeItem('op_v3');}catch(e){}
+  try{localStorage.removeItem('op_v3');localStorage.removeItem('op_v2');localStorage.removeItem('operador_v1');localStorage.removeItem('operador_v2');}catch(e){}
   S=JSON.parse(JSON.stringify(DEF));saveS();updateHUD();renderP();toast('DATOS RESETEADOS',AMBER);
 }
 
